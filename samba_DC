@@ -1,0 +1,13 @@
+#!/bin/bash
+
+if [ "$EUID" == 0 ]; then
+
+    echo hello world
+
+    DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils
+
+else
+    echo Script must be started as root
+fi
+
+exit 0
