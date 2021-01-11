@@ -6,6 +6,9 @@ if [ "$EUID" == 0 ]; then
 
     DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils
 
+    rm /etc/samba/smb.conf
+
+    samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${NetBiosName}"
 else
     echo Script must be started as root
 fi
