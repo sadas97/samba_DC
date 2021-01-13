@@ -2,15 +2,41 @@
 
 if [ "$EUID" == 0 ]; then
 
-    echo hello world
+    #DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils
+    #rm /etc/samba/smb.conf
 
-    DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils
+    while [ -z "${KerberosRealm}" ]; do
+	if [ -z "${KRBI}" ]; then
+	    KRBI=1
+	elif [ "${KRBI}" ]; then
+	    echo "Kerberos realm must be filled"
+	fi
+	read -p "Enter Kerberos realm:" KerberosRealm
+    done
 
-    rm /etc/samba/smb.conf
+    while [ -z "${NetBiosName}" ]; do
+	if [ -z "${NBNI}" ]; then
+	    NBNI=1
+	elif [ "${NBNI}" ]; then
+	    echo "Netbios name must be filled"
+	fi
+	read -p "Enter NetBiosName:" NetBiosName
+    done
 
-    samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${NetBiosName}"
+    while [ -z "${AdminPass}" ]; do
+	if [ -z "${ADPI}" ]; then
+	    ADPI=1
+	elif [ "${ADPI}" ]; then
+	    echo "Admin password must be filled"
+	fi
+	read -p "Enter domain administrator password:" AdminPass
+    done
+
+    #samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${NetBiosName}" --adminpass="${AdminPass}"
+    #cp /var/lib/private/krb5.conf /etc/krb5.config
+    #samba
 else
-    echo Script must be started as root
+    echo "Script must be started as root"
 fi
 
 exit 0
