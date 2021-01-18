@@ -2,44 +2,70 @@
 
 if [ "$EUID" == 0 ]; then
 
-    DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils
-    rm /etc/samba/smb.conf
+    printf "Enter\n1 - Configure as Primary domain controller\n2 - Replicate domain controller\n"
+    ChoiceReset=1
 
-    while [ -z "${KerberosRealm}" ]; do
-	if [ -z "${KRBI}" ]; then
-	    KRBI=1
-	elif [ "${KRBI}" ]; then
-	    echo "Kerberos realm must be filled"
+    while [ "${ChoiceReset}" == 1 ]; do
+	if [ -z "${ConfMessage}" ]; then
+	    ConfMessage=1
+	elif [ "${ConfMessage}" ]; then
+	    echo "Must enter 1 or 2"
 	fi
-	read -p "Enter Kerberos realm:" KerberosRealm
+
+	read -p ">" ConfChoice
+
+	if [ "${ConfChoice}" == 1 ] || [ "${ConfChoice}" == 2 ]; then 
+	    ChoiceReset=0
+	fi
     done
 
-    while [ -z "${DomainName}" ]; do
-	if [ -z "${DNI}" ]; then
-	    DNI=1
-	elif [ "${DNI}" ]; then
-	    echo "Domain name must be filled"
-	fi
-	read -p "Enter domain name:" DomainName
-    done
+    #DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils
+    #rm /etc/samba/smb.conf
 
-    while [ -z "${AdminPass}" ]; do
-	if [ -z "${ADPI}" ]; then
-	    ADPI=1
-	elif [ "${ADPI}" ]; then
-	    echo "Admin password must be filled"
-	fi
-	read -p "Enter domain administrator password:" AdminPass
-    done
+    if [ "${ConfChoice}" == 1 ]; then
+	echo "Choice 1"
 
-    samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
-    cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
+        while [ -z "${KerberosRealm}" ]; do
+	    if [ -z "${KRBI}" ]; then
+	        KRBI=1
+	    elif [ "${KRBI}" ]; then
+		echo "Kerberos realm must be filled"
+	    fi
 
-    pkill smbd
-    pkill winbindd
-    pkill nmbd
+	    read -p "Enter Kerberos realm:" KerberosRealm
+	done
 
-    samba
+	while [ -z "${DomainName}" ]; do
+	    if [ -z "${DNI}" ]; then
+		DNI=1
+	    elif [ "${DNI}" ]; then
+		echo "Domain name must be filled"
+	    fi
+
+	    read -p "Enter domain name:" DomainName
+	done
+
+	while [ -z "${AdminPass}" ]; do
+	    if [ -z "${ADPI}" ]; then
+		ADPI=1
+	    elif [ "${ADPI}" ]; then
+		echo "Admin password must be filled"
+	    fi
+
+	    read -p "Enter domain administrator password:" AdminPass
+	done
+
+	#samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
+	#cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
+
+	#pkill smbd
+	#pkill winbindd
+	#pkill nmbd
+
+	#samba
+    elif [ "${ConfChoice}" == 2 ]; then
+	echo "Choice 2"
+    fi
 else
     echo "Script must be started as root"
 fi
