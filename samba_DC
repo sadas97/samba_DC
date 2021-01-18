@@ -52,7 +52,7 @@ if [ "$EUID" == 0 ]; then
 		echo "Admin password must be filled"
 	    fi
 
-	    read -p "Enter domain administrator password:" AdminPass
+	    read -s -p "Enter domain administrator password:" AdminPass
 	done
 
 	#samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
@@ -63,8 +63,41 @@ if [ "$EUID" == 0 ]; then
 	#pkill nmbd
 
 	#samba
+
     elif [ "${ConfChoice}" == 2 ]; then
-	echo "Choice 2"
+	echo "Choice 2
+"
+	while [ -z "${KerberosRealm}" ]; do
+	    if [ -z "${KRBI}" ]; then
+	        KRBI=1
+	    elif [ "${KRBI}" ]; then
+		echo "Kerberos realm must be filled"
+	    fi
+	    read -p "Enter Kerberos realm:" KerberosRealm
+	done
+
+	while [ -z "${DomainName}" ]; do
+	    if [ -z "${DNI}" ]; then
+	        DNI=1
+	    elif [ "${DNI}" ]; then
+	    echo "Domain name must be filled"
+	    fi
+	    read -p "Enter domain name:" DomainName
+	done
+
+	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /root/test.txt
+	printf "Join to domain using\n1 - Username and password\n2 - Kerberos"
+	read -p ">" JoinChoice
+
+#	while [ "Cycle until user chooses" ]; do
+#	    if [ "${JoinChoice}" == 1 ]; then
+#		samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/administrator"
+#	    elif [ "${JoinChoice}" == 2 ]; then
+#		samba-tool domain join ${KerberosRealm} DC -k yes
+#	    else
+#		echo "You must enter 1 or 2.."
+#		fi
+#	done
     fi
 else
     echo "Script must be started as root"
