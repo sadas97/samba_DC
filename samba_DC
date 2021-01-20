@@ -1,8 +1,35 @@
 #!/bin/bash
 
+#Check if user is root
 if [ "$EUID" == 0 ]; then
 
-    printf "Enter\n1 - Configure as Primary domain controller\n2 - Replicate domain controller\n"
+    printf "\nBefore you run this script make sure\n- you have set a static IP adress for your DC\n- your DC correctly resolves "\
+"fully-qualified domain name and short hostname (in /etc/hosts)\n- your DC has the AD DNS domain set in the 'search' "\
+"parameter and the IP of the DC in the 'nameserver' parameter of the /etc/resolv.conf file\n"
+
+    printf "Are these conditions met? y/n\n"
+    ConfirmReset=1
+    while [ "${ConfirmReset}" == 1 ]; do
+	if [ -z "${ConfirmMessage}" ]; then
+	    ConfirmMessage=1
+	elif [ "${ConfirmMessage}" ]; then
+	    echo "Must enter y or n"
+	fi
+
+	read -p ">" ConfirmChoice
+
+	if [ "${ConfirmChoice}" == y ] || [ "${ConfirmChoice}" == n ]; then 
+	    ConfirmReset=0
+	fi
+    done
+
+    if [ "${ConfirmChoice}" == n ]; then
+	echo "After you finish these steps run the script again"
+	exit 0
+    fi
+
+#Domain controller mode choice
+    printf "Choose your configuration\n1 - Configure as Primary domain controller\n2 - Replicate domain controller\n"
     ChoiceReset=1
 
     while [ "${ChoiceReset}" == 1 ]; do
@@ -19,12 +46,16 @@ if [ "$EUID" == 0 ]; then
 	fi
     done
 
+#Installing needed packages and removing config file (it will be created when provisioning/joining domain)
     #DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils
     #rm /etc/samba/smb.conf
 
-    if [ "${ConfChoice}" == 1 ]; then
-	echo "Choice 1"
 
+#Samba as Primary Controller
+    if [ "${ConfChoice}" == 1 ]; then
+#	echo "Choice 1"
+
+#Getting variables needed for provision
         while [ -z "${KerberosRealm}" ]; do
 	    if [ -z "${KRBI}" ]; then
 	        KRBI=1
@@ -55,6 +86,8 @@ if [ "$EUID" == 0 ]; then
 	    read -s -p "Enter domain administrator password:" AdminPass
 	done
 
+
+#Provisioning domain and replacing original krb5 config file with an auto-created one
 	#samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
 	#cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
@@ -62,11 +95,19 @@ if [ "$EUID" == 0 ]; then
 	#pkill winbindd
 	#pkill nmbd
 
+
+#Starting Samba service
 	#samba
 
+
+
+
+
+#Samba DC replicant
     elif [ "${ConfChoice}" == 2 ]; then
-	echo "Choice 2
-"
+#	echo "Choice 2"
+
+#Getting varibles for krb5 config file and domain join
 	while [ -z "${KerberosRealm}" ]; do
 	    if [ -z "${KRBI}" ]; then
 	        KRBI=1
@@ -85,19 +126,57 @@ if [ "$EUID" == 0 ]; then
 	    read -p "Enter domain name:" DomainName
 	done
 
-	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /root/test.txt
-	printf "Join to domain using\n1 - Username and password\n2 - Kerberos"
-	read -p ">" JoinChoice
+#	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /root/test.txt
+	printf "Join to domain using\n1 - Username and password\n2 - Kerberos\n"
 
-#	while [ "Cycle until user chooses" ]; do
-#	    if [ "${JoinChoice}" == 1 ]; then
-#		samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/administrator"
-#	    elif [ "${JoinChoice}" == 2 ]; then
-#		samba-tool domain join ${KerberosRealm} DC -k yes
-#	    else
-#		echo "You must enter 1 or 2.."
-#		fi
-#	done
+	ChoiceReset=1
+	while [ "${ChoiceReset}" == 1 ]; do
+	    if [ -z "${JoinConfMessage}" ]; then
+		JoinConfMessage=1
+	    elif [ "${JoinConfMessage}" ]; then
+		echo "Must enter 1 or 2"
+	    fi
+
+	    read -p ">" JoinChoice
+
+	    if [ "${JoinChoice}" == 1 ] || [ "${JoinChoice}" == 2 ]; then 
+		ChoiceReset=0
+	    fi
+	done
+
+	if [ "${JoinChoice}" == 1 ]; then
+	    echo "JoinChoice 1"
+#	    samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/administrator"
+	elif [ "${JoinChoice}" == 2 ]; then
+	    echo "JoinChoice 2"
+#	    samba-tool domain join ${KerberosRealm} DC -k yes
+	fi
+
+
+	printf "Is PDC a\n1 - Windows server\n2 - Samba PDC\n"
+	ChoiceReset=1
+	while [ "${ChoiceReset}" == 1 ]; do
+	    if [ -z "${SysvolConfMessage}" ]; then
+		SysvolConfMessage=1
+	    elif [ "${SysvolConfMessage}" ]; then
+		echo "Must enter 1 or 2"
+	    fi
+
+	    read -p ">" SysvolChoice
+
+	    if [ "${SysvolChoice}" == 1 ] || [ "${SysvolChoice}" == 2 ]; then 
+		ChoiceReset=0
+	    fi
+	done
+
+	if [ "${SysvolChoice}" == 1 ]; then
+	    echo "Windows Server"
+
+
+	elif [ "${SysvolChoice}" == 2 ]; then
+	    echo "Samba DC"
+	    
+	fi
     fi
 else
     echo "Script must be started as root"
