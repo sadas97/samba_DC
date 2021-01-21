@@ -5,7 +5,8 @@ if [ "$EUID" == 0 ]; then
 
     printf "\nBefore you run this script make sure\n- you have set a static IP adress for your DC\n- your DC correctly resolves "\
 "fully-qualified domain name and short hostname (in /etc/hosts)\n- your DC has the AD DNS domain set in the 'search' "\
-"parameter and the IP of the DC in the 'nameserver' parameter of the /etc/resolv.conf file\n"
+"parameter and the IP of the DC in the 'nameserver' parameter of the /etc/resolv.conf file\nIn case of domain controller"\
+"replication\n- Synch idmap.ldb from you PDC by copying it into the folder where this script is located"
 
     printf "Are these conditions met? y/n\n"
     ConfirmReset=1
@@ -175,7 +176,18 @@ if [ "$EUID" == 0 ]; then
 
 	elif [ "${SysvolChoice}" == 2 ]; then
 	    echo "Samba DC"
-	    
+
+	    while [ -z "${SysvolPass}" ]; do
+		if [ -z "${SP}" ]; then
+		    ADPI=1
+	        elif [ "${SP}" ]; then
+		    echo "Sysvol password must be filled"
+		fi
+		read -s -p "Enter Sysvol replication password:" SysvolPass
+	    done
+
+	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
+#	    rsync
 	fi
     fi
 else
