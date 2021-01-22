@@ -127,7 +127,7 @@ if [ "$EUID" == 0 ]; then
 	    read -p "Enter domain name:" DomainName
 	done
 
-#	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /root/test.txt
+#	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
 	printf "Join to domain using\n1 - Username and password\n2 - Kerberos\n"
 
 	ChoiceReset=1
@@ -174,8 +174,20 @@ if [ "$EUID" == 0 ]; then
 	    echo "Windows Server"
 
 
+
+
 	elif [ "${SysvolChoice}" == 2 ]; then
 	    echo "Samba DC"
+
+
+	    while [ -z "${PDCIP}" ]; do
+		if [ -z "${PI}" ]; then
+		    ADPI=1
+	        elif [ "${PI}" ]; then
+		    echo "IP of the PDC must be filled"
+		fi
+		read -p "Enter the IP of your domain controller:" PDCIP
+	    done
 
 	    while [ -z "${SysvolPass}" ]; do
 		if [ -z "${SP}" ]; then
@@ -186,8 +198,17 @@ if [ "$EUID" == 0 ]; then
 		read -s -p "Enter Sysvol replication password:" SysvolPass
 	    done
 
-	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
-#	    rsync
+
+
+	    echo "${PDCIP}"
+	    echo "${SysvolPass}"
+
+	    #printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
+	    #chmod 600 /var/lib/samba/rsyncd-sysvold.secret
+	    #crontab -l > tmpcron
+	    #echo "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
+	    #crontab tmpcron
+	    #rm tmpcron
 	fi
     fi
 else
