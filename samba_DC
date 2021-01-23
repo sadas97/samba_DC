@@ -29,7 +29,7 @@ if [ "$EUID" == 0 ]; then
 	exit 0
     fi
 
-#Domain controller mode choice
+#Domain controller config choice
     printf "Choose your configuration\n1 - Configure as Primary domain controller\n2 - Replicate domain controller\n"
     ChoiceReset=1
 
@@ -48,45 +48,59 @@ if [ "$EUID" == 0 ]; then
     done
 
 #Installing needed packages and removing config file (it will be created when provisioning/joining domain)
-    #DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils
-    #rm /etc/samba/smb.conf
+    DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
+    rm /etc/samba/smb.conf
+
+    
+
+    while [ -z "${DCIP}" ]; do
+	if [ -z "${DomCIP}" ]; then
+	    ADPI=1
+        elif [ "${DomCIP}" ]; then
+	    echo "IP must be filled"
+	fi
+	read -p "Enter the local IP of this domain controller:" DCIP
+    done
+
+    printf "nameserver ${DCIP}\nsearch \n"
+
+
+#Getting varibles for krb5 config file and domain join or for domain provision
+	while [ -z "${KerberosRealm}" ]; do
+	    if [ -z "${KRBMessage}" ]; then
+	        KRBMessage=1
+	    elif [ "${KRBMessage}" ]; then
+		echo "Kerberos realm must be filled"
+	    fi
+	    read -p "Enter Kerberos realm:" KerberosRealm
+	done
+
+	while [ -z "${DomainName}" ]; do
+	    if [ -z "${DNMessage}" ]; then
+	        DNMessage=1
+	    elif [ "${DNMessage}" ]; then
+	    echo "Domain name must be filled"
+	    fi
+	    read -p "Enter domain name:" DomainName
+	done
+
+
 
 
 #Samba as Primary Controller
     if [ "${ConfChoice}" == 1 ]; then
 #	echo "Choice 1"
 
-#Getting variables needed for provision
-        while [ -z "${KerberosRealm}" ]; do
-	    if [ -z "${KRBI}" ]; then
-	        KRBI=1
-	    elif [ "${KRBI}" ]; then
-		echo "Kerberos realm must be filled"
-	    fi
-
-	    read -p "Enter Kerberos realm:" KerberosRealm
-	done
-
-	while [ -z "${DomainName}" ]; do
-	    if [ -z "${DNI}" ]; then
-		DNI=1
-	    elif [ "${DNI}" ]; then
-		echo "Domain name must be filled"
-	    fi
-
-	    read -p "Enter domain name:" DomainName
-	done
-
+#Getting admin password needed for provision
 	while [ -z "${AdminPass}" ]; do
-	    if [ -z "${ADPI}" ]; then
-		ADPI=1
-	    elif [ "${ADPI}" ]; then
+	    if [ -z "${ADPMessage}" ]; then
+		ADPMessage=1
+	    elif [ "${ADPMessage}" ]; then
 		echo "Admin password must be filled"
 	    fi
 
 	    read -s -p "Enter domain administrator password:" AdminPass
 	done
-
 
 #Provisioning domain and replacing original krb5 config file with an auto-created one
 	#samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
@@ -108,27 +122,8 @@ if [ "$EUID" == 0 ]; then
     elif [ "${ConfChoice}" == 2 ]; then
 #	echo "Choice 2"
 
-#Getting varibles for krb5 config file and domain join
-	while [ -z "${KerberosRealm}" ]; do
-	    if [ -z "${KRBI}" ]; then
-	        KRBI=1
-	    elif [ "${KRBI}" ]; then
-		echo "Kerberos realm must be filled"
-	    fi
-	    read -p "Enter Kerberos realm:" KerberosRealm
-	done
-
-	while [ -z "${DomainName}" ]; do
-	    if [ -z "${DNI}" ]; then
-	        DNI=1
-	    elif [ "${DNI}" ]; then
-	    echo "Domain name must be filled"
-	    fi
-	    read -p "Enter domain name:" DomainName
-	done
-
-#	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
-	printf "Join to domain using\n1 - Username and password\n2 - Kerberos\n"
+	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
+	printf "Join to domain using\n1 - Username and password (using administrator account)\n2 - Kerberos\n"
 
 	ChoiceReset=1
 	while [ "${ChoiceReset}" == 1 ]; do
@@ -150,7 +145,7 @@ if [ "$EUID" == 0 ]; then
 #	    samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/administrator"
 	elif [ "${JoinChoice}" == 2 ]; then
 	    echo "JoinChoice 2"
-#	    samba-tool domain join ${KerberosRealm} DC -k yes
+	    samba-tool domain join ${KerberosRealm} DC -k yes
 	fi
 
 
@@ -176,23 +171,25 @@ if [ "$EUID" == 0 ]; then
 
 
 
+
+
+
 	elif [ "${SysvolChoice}" == 2 ]; then
 	    echo "Samba DC"
 
-
 	    while [ -z "${PDCIP}" ]; do
-		if [ -z "${PI}" ]; then
-		    ADPI=1
-	        elif [ "${PI}" ]; then
-		    echo "IP of the PDC must be filled"
+		if [ -z "${PDCIPMessage}" ]; then
+		    PDCIPMessage=1
+		elif [ "${PDCIPMessage}" ]; then
+		    echo "IP must be filled"
 		fi
-		read -p "Enter the IP of your domain controller:" PDCIP
+		read -p "Enter the local IP of this domain controller:" PDCIP
 	    done
 
 	    while [ -z "${SysvolPass}" ]; do
-		if [ -z "${SP}" ]; then
-		    ADPI=1
-	        elif [ "${SP}" ]; then
+		if [ -z "${SysvolPassPMessage}" ]; then
+		    SysvolPassPMessage=1
+	        elif [ "${SysvolPassMessage}" ]; then
 		    echo "Sysvol password must be filled"
 		fi
 		read -s -p "Enter Sysvol replication password:" SysvolPass
@@ -203,12 +200,18 @@ if [ "$EUID" == 0 ]; then
 	    echo "${PDCIP}"
 	    echo "${SysvolPass}"
 
-	    #printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
-	    #chmod 600 /var/lib/samba/rsyncd-sysvold.secret
-	    #crontab -l > tmpcron
-	    #echo "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
-	    #crontab tmpcron
-	    #rm tmpcron
+	    idmapDir="$(dirname $0)/idmap.ldb"
+	    cp ${idmapDir} /var/lib/samba/private/idmap.ldb
+	    net cache flush
+
+	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
+	    chmod 600 /var/lib/samba/rsyncd-sysvold.secret
+	    crontab -l > tmpcron
+	    echo "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
+	    crontab tmpcron
+	    rm tmpcron
+
+	    samba-tool ntacl sysvolreset
 	fi
     fi
 else
@@ -216,3 +219,6 @@ else
 fi
 
 exit 0
+
+
+#Rsync should ask for username as well
