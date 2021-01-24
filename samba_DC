@@ -51,18 +51,6 @@ if [ "$EUID" == 0 ]; then
     DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
     rm /etc/samba/smb.conf
 
-    
-
-    while [ -z "${DCIP}" ]; do
-	if [ -z "${DomCIP}" ]; then
-	    ADPI=1
-        elif [ "${DomCIP}" ]; then
-	    echo "IP must be filled"
-	fi
-	read -p "Enter the local IP of this domain controller:" DCIP
-    done
-
-    printf "nameserver ${DCIP}\nsearch \n"
 
 
 #Getting varibles for krb5 config file and domain join or for domain provision
@@ -81,10 +69,20 @@ if [ "$EUID" == 0 ]; then
 	    elif [ "${DNMessage}" ]; then
 	    echo "Domain name must be filled"
 	    fi
-	    read -p "Enter domain name:" DomainName
+	    read -p "Enter NetBios domain name (In example.com -> example):" DomainName
 	done
 
 
+	while [ -z "${DCIP}" ]; do
+	    if [ -z "${DomCIP}" ]; then
+		ADPI=1
+	    elif [ "${DomCIP}" ]; then
+		echo "IP must be filled"
+	    fi
+	    read -p "Enter the local IP of this domain controller:" DCIP
+	done
+
+	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n"
 
 
 #Samba as Primary Controller
@@ -183,7 +181,7 @@ if [ "$EUID" == 0 ]; then
 		elif [ "${PDCIPMessage}" ]; then
 		    echo "IP must be filled"
 		fi
-		read -p "Enter the local IP of this domain controller:" PDCIP
+		read -p "Enter the IP of the primary domain controller:" PDCIP
 	    done
 
 	    while [ -z "${SysvolPass}" ]; do
@@ -196,9 +194,6 @@ if [ "$EUID" == 0 ]; then
 	    done
 
 
-
-	    echo "${PDCIP}"
-	    echo "${SysvolPass}"
 
 	    idmapDir="$(dirname $0)/idmap.ldb"
 	    cp ${idmapDir} /var/lib/samba/private/idmap.ldb
