@@ -69,7 +69,7 @@ if [ "$EUID" == 0 ]; then
 	    elif [ "${DNMessage}" ]; then
 	    echo "Domain name must be filled"
 	    fi
-	    read -p "Enter NetBios domain name (In example.com -> example):" DomainName
+	    read -p "Enter NetBios domain name (In example.com -> EXAMPLE):" DomainName
 	done
 
 
@@ -82,7 +82,7 @@ if [ "$EUID" == 0 ]; then
 	    read -p "Enter the local IP of this domain controller:" DCIP
 	done
 
-	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n"
+
 
 
 #Samba as Primary Controller
@@ -101,16 +101,19 @@ if [ "$EUID" == 0 ]; then
 	done
 
 #Provisioning domain and replacing original krb5 config file with an auto-created one
-	#samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
-	#cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
+	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
+	cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
-	#pkill smbd
-	#pkill winbindd
-	#pkill nmbd
+	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
+	systemctl restart resolvconf
+
+	pkill smbd
+	pkill winbindd
+	pkill nmbd
 
 
 #Starting Samba service
-	#samba
+	samba
 
 
 
