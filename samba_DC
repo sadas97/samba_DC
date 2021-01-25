@@ -123,8 +123,23 @@ if [ "$EUID" == 0 ]; then
     elif [ "${ConfChoice}" == 2 ]; then
 #	echo "Choice 2"
 
+	
+
+	while [ -z "${PDCIP}" ]; do
+	    if [ -z "${PDCIPMessage}" ]; then
+		PDCIPMessage=1
+	    elif [ "${PDCIPMessage}" ]; then
+		echo "IP must be filled"
+	    fi
+	    read -p "Enter the IP of the primary domain controller:" PDCIP
+	done
+
+
 	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
 	printf "Join to domain using\n1 - Username and password (using administrator account)\n2 - Kerberos\n"
+
+	printf "nameserver ${PDCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
+	systemctl restart resolvconf
 
 	ChoiceReset=1
 	while [ "${ChoiceReset}" == 1 ]; do
@@ -146,9 +161,11 @@ if [ "$EUID" == 0 ]; then
 #	    samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/administrator"
 	elif [ "${JoinChoice}" == 2 ]; then
 	    echo "JoinChoice 2"
+	    kinit administrator
 	    samba-tool domain join ${KerberosRealm} DC -k yes
 	fi
 
+	
 
 	printf "Is PDC a\n1 - Windows server\n2 - Samba PDC\n"
 	ChoiceReset=1
@@ -178,15 +195,6 @@ if [ "$EUID" == 0 ]; then
 	elif [ "${SysvolChoice}" == 2 ]; then
 	    echo "Samba DC"
 
-	    while [ -z "${PDCIP}" ]; do
-		if [ -z "${PDCIPMessage}" ]; then
-		    PDCIPMessage=1
-		elif [ "${PDCIPMessage}" ]; then
-		    echo "IP must be filled"
-		fi
-		read -p "Enter the IP of the primary domain controller:" PDCIP
-	    done
-
 	    while [ -z "${SysvolPass}" ]; do
 		if [ -z "${SysvolPassPMessage}" ]; then
 		    SysvolPassPMessage=1
@@ -203,9 +211,11 @@ if [ "$EUID" == 0 ]; then
 	    net cache flush
 
 	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
-	    chmod 600 /var/lib/samba/rsyncd-sysvold.secret
-	    crontab -l > tmpcron
-	    echo "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
+	    chmod 600 /var/lib/samba/rsyncd-sysvol.secret
+	    if [ -e /var/spool/cron/crontab/root ]; then
+		crontab -l > tmpcron
+	    fi
+	    printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
 	    crontab tmpcron
 	    rm tmpcron
 
