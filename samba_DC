@@ -158,7 +158,7 @@ if [ "$EUID" == 0 ]; then
 
 	if [ "${JoinChoice}" == 1 ]; then
 	    echo "JoinChoice 1"
-#	    samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/administrator"
+	    samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/administrator"
 	elif [ "${JoinChoice}" == 2 ]; then
 	    echo "JoinChoice 2"
 	    kinit administrator
@@ -186,7 +186,7 @@ if [ "$EUID" == 0 ]; then
 	if [ "${SysvolChoice}" == 1 ]; then
 	    echo "Windows Server"
 
-
+	
 
 
 
@@ -221,6 +221,14 @@ if [ "$EUID" == 0 ]; then
 
 	    samba-tool ntacl sysvolreset
 	fi
+
+	pkill smbd
+	pkill winbindd
+	pkill nmbd
+
+#Starting Samba service
+	samba
+
     fi
 else
     echo "Script must be started as root"
