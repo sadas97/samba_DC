@@ -185,7 +185,17 @@ if [ "$EUID" == 0 ]; then
 
 	if [ "${SysvolChoice}" == 1 ]; then
 	    echo "Windows Server"
-
+	    printf "To replicate the sysvol folder you must set up a task on your Primary domain controller\n"\
+	    "-Click 'Start' / 'Run' / type 'taskschd.msc' and click 'OK'\n-Right-click to 'Task Scheduler'"\
+	    "/ choose 'Create Task'\n-Enter a task name\n-Select 'Run whether user is logged on or not'\n"\
+	    "-Navigate to the 'Triggers' tab and click the 'New' button\n-Select 'Daily', check\n"\
+	    "'Repeat task every: 5 minutes' and 'for a duration of: 1 day'. Choose the time for the first start about"\
+	    "15 min in the future, to have enough time for the remaining steps\n-Click 'OK' to save the trigger\n"\
+	    "-Navigate to the 'Actions' tab and click the 'New' button\n-Choose 'Start a program' and fill the fields"\
+	    "with following path/arguments:\n	Program/script:  C:\Windows\System32\Robocopy.exe\n"\
+	    "	Add arguments (optional):  \\${DCIP}\SYSVOL\${KerberosRealm}\ C:\Windows\SYSVOL\domain\ /mir /sec\n"\
+	    "-Click 'OK' to save the action\n-Save the task with 'OK'\n Restart the File Replication Service\n"\
+	    "-'Start' / 'Run' / enter 'services.msc' and click 'OK'\n-Restart the 'File Replication Service'"
 	
 
 
