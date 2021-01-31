@@ -4,9 +4,9 @@
 if [ "$EUID" == 0 ]; then
 
     printf "\nBefore you run this script make sure\n- you have set a static IP adress for your DC\n- your DC correctly resolves "\
-"fully-qualified domain name and short hostname (in /etc/hosts)\n- your DC has the AD DNS domain set in the 'search' "\
-"parameter and the IP of the DC in the 'nameserver' parameter of the /etc/resolv.conf file\nIn case of domain controller"\
-"replication\n- Synch idmap.ldb from you PDC by copying it into the folder where this script is located"
+    "fully-qualified domain name and short hostname (in /etc/hosts)\n- your DC has the AD DNS domain set in the 'search' "\
+    "parameter and the IP of the DC in the 'nameserver' parameter of the /etc/resolv.conf file\nIn case of domain controller"\
+    "replication\n- Synch idmap.ldb from you PDC by copying it into the folder where this script is located"
 
     printf "Are these conditions met? y/n\n"
     ConfirmReset=1
