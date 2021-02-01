@@ -3,35 +3,49 @@
 #Check if user is root
 if [ "$EUID" == 0 ]; then
 
+#Confirming that conditions needed for the correct funtioning of the script are met
     printf "\nBefore you run this script make sure\n- you have set a static IP adresses for your DC\n- your DC correctly resolves "\
 "fully-qualified domain name and short hostname (in /etc/hosts)\nIn case of a domain controller "\
 "replication\n- Copy the idmap.ldb file from you PDC into the folder where this script is located\n"
 
     printf "Are these conditions met? y/n\n"
+
+
+    #Cycle that keeps repeating until user inputs one of the correct values
     ConfirmReset=1
     while [ "${ConfirmReset}" == 1 ]; do
+
+	#The variable ConfirmMessage doesn't exist on the first run-through and so it is set.
+	#If the user then enters a wrong value and the cycle continues, the variable is
+	#already set and so the message is shown
 	if [ -z "${ConfirmMessage}" ]; then
 	    ConfirmMessage=1
 	elif [ "${ConfirmMessage}" ]; then
 	    echo "Must enter y or n"
 	fi
 
+	#Wait for user input and save it into a variable
 	read -p ">" ConfirmChoice
 
+	#If the user inserted the right value, ConfirmReset is set to 0, making the cycle
+	#condition false and ending the cycle
 	if [ "${ConfirmChoice}" == y ] || [ "${ConfirmChoice}" == n ]; then 
 	    ConfirmReset=0
 	fi
     done
+
 
     if [ "${ConfirmChoice}" == n ]; then
 	echo "After you finish these steps run the script again"
 	exit 0
     fi
 
+
 #Domain controller config choice
     printf "Choose your configuration\n1 - Configure as Primary domain controller\n2 - Replicate domain controller\n"
     ChoiceReset=1
 
+    #Cycle asking user for input
     while [ "${ChoiceReset}" == 1 ]; do
 	if [ -z "${ConfMessage}" ]; then
 	    ConfMessage=1
@@ -46,13 +60,17 @@ if [ "$EUID" == 0 ]; then
 	fi
     done
 
-#Installing needed packages and removing config file (it will be created when provisioning/joining domain)
+
+#Installing needed packages and removing config file (it is created automaticaly
+#when provisioning/joining domain)
     DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
     rm /etc/samba/smb.conf
 
 
 
 #Getting varibles for krb5 config file and domain join or for domain provision
+
+	#Cycle asking user for input
 	while [ -z "${KerberosRealm}" ]; do
 	    if [ -z "${KRBMessage}" ]; then
 	        KRBMessage=1
@@ -62,6 +80,7 @@ if [ "$EUID" == 0 ]; then
 	    read -p "Enter Kerberos realm:" KerberosRealm
 	done
 
+	#Cycle asking user for input
 	while [ -z "${DomainName}" ]; do
 	    if [ -z "${DNMessage}" ]; then
 	        DNMessage=1
@@ -71,7 +90,7 @@ if [ "$EUID" == 0 ]; then
 	    read -p "Enter NetBios domain name (In example.com -> EXAMPLE):" DomainName
 	done
 
-
+	#Cycle asking user for input
 	while [ -z "${DCIP}" ]; do
 	    if [ -z "${DomCIP}" ]; then
 		ADPI=1
@@ -86,9 +105,9 @@ if [ "$EUID" == 0 ]; then
 
 #Samba as Primary Controller
     if [ "${ConfChoice}" == 1 ]; then
-#	echo "Choice 1"
 
 #Getting admin password needed for provision
+	#Cycle asking user for input
 	while [ -z "${AdminPass}" ]; do
 	    if [ -z "${ADPMessage}" ]; then
 		ADPMessage=1
@@ -103,13 +122,14 @@ if [ "$EUID" == 0 ]; then
 	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
 	cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
+#Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
 	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
 	systemctl restart resolvconf
 
+#Stoping samba related processes
 	pkill smbd
 	pkill winbindd
 	pkill nmbd
-
 
 #Starting Samba service
 	samba
@@ -120,10 +140,8 @@ if [ "$EUID" == 0 ]; then
 
 #Samba DC replicant
     elif [ "${ConfChoice}" == 2 ]; then
-#	echo "Choice 2"
 
-	
-
+#Getting the IP of the primary DC
 	while [ -z "${PDCIP}" ]; do
 	    if [ -z "${PDCIPMessage}" ]; then
 		PDCIPMessage=1
@@ -133,13 +151,15 @@ if [ "$EUID" == 0 ]; then
 	    read -p "Enter the IP of the primary domain controller:" PDCIP
 	done
 
-
+#Configuring krb5
 	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
+
+#Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
+	printf "nameserver ${PDCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
+	systemctl restart resolvconf
+
+#Choosing a join method
 	printf "Join to domain using\n1 - Username and password (using administrator account)\n2 - Kerberos\n"
-
-	#printf "nameserver ${PDCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
-	#systemctl restart resolvconf
-
 	ChoiceReset=1
 	while [ "${ChoiceReset}" == 1 ]; do
 	    if [ -z "${JoinConfMessage}" ]; then
@@ -161,7 +181,7 @@ if [ "$EUID" == 0 ]; then
 	elif [ "${JoinChoice}" == 2 ]; then
 	    echo "JoinChoice 2"
 	    kinit administrator
-	#    samba-tool domain join ${KerberosRealm} DC -k yes
+	    samba-tool domain join ${KerberosRealm} DC -k yes
 	fi
 
 	
@@ -223,8 +243,6 @@ if [ "$EUID" == 0 ]; then
 	    done
 
 
-
-
 	elif [ "${SysvolChoice}" == 2 ]; then
 	    echo "Samba DC"
 
@@ -239,29 +257,29 @@ if [ "$EUID" == 0 ]; then
 
 
 
-	    #idmapDir="$(dirname $0)/idmap.ldb"
-	    #cp ${idmapDir} /var/lib/samba/private/idmap.ldb
-	    #net cache flush
+	    idmapDir="$(dirname $0)/idmap.ldb"
+	    cp ${idmapDir} /var/lib/samba/private/idmap.ldb
+	    net cache flush
 
-	    #printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
-	    #chmod 600 /var/lib/samba/rsyncd-sysvol.secret
-	    #if [ -e /var/spool/cron/crontab/root ]; then
-	#	crontab -l > tmpcron
-	    #fi
-	    #printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
-	    #crontab tmpcron
-	    #rm tmpcron
+	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
+	    chmod 600 /var/lib/samba/rsyncd-sysvol.secret
+	    if [ -e /var/spool/cron/crontab/root ]; then
+		crontab -l > tmpcron
+	    fi
+	    printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
+	    crontab tmpcron
+	    rm tmpcron
 
 	fi
 
-	#samba-tool ntacl sysvolreset
+	samba-tool ntacl sysvolreset
 
-	#pkill smbd
-	#pkill winbindd
-	#pkill nmbd
+	pkill smbd
+	pkill winbindd
+	pkill nmbd
 
 #Starting Samba service
-	#samba
+	samba
 
     fi
 else
