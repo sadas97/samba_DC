@@ -3,10 +3,9 @@
 #Check if user is root
 if [ "$EUID" == 0 ]; then
 
-    printf "\nBefore you run this script make sure\n- you have set a static IP adress for your DC\n- your DC correctly resolves "\
-    "fully-qualified domain name and short hostname (in /etc/hosts)\n- your DC has the AD DNS domain set in the 'search' "\
-    "parameter and the IP of the DC in the 'nameserver' parameter of the /etc/resolv.conf file\nIn case of domain controller"\
-    "replication\n- Synch idmap.ldb from you PDC by copying it into the folder where this script is located"
+    printf "\nBefore you run this script make sure\n- you have set a static IP adresses for your DC\n- your DC correctly resolves "\
+"fully-qualified domain name and short hostname (in /etc/hosts)\nIn case of a domain controller "\
+"replication\n- Copy the idmap.ldb file from you PDC into the folder where this script is located\n"
 
     printf "Are these conditions met? y/n\n"
     ConfirmReset=1
@@ -138,8 +137,8 @@ if [ "$EUID" == 0 ]; then
 	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
 	printf "Join to domain using\n1 - Username and password (using administrator account)\n2 - Kerberos\n"
 
-	printf "nameserver ${PDCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
-	systemctl restart resolvconf
+	#printf "nameserver ${PDCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
+	#systemctl restart resolvconf
 
 	ChoiceReset=1
 	while [ "${ChoiceReset}" == 1 ]; do
@@ -162,7 +161,7 @@ if [ "$EUID" == 0 ]; then
 	elif [ "${JoinChoice}" == 2 ]; then
 	    echo "JoinChoice 2"
 	    kinit administrator
-	    samba-tool domain join ${KerberosRealm} DC -k yes
+	#    samba-tool domain join ${KerberosRealm} DC -k yes
 	fi
 
 	
@@ -186,18 +185,42 @@ if [ "$EUID" == 0 ]; then
 	if [ "${SysvolChoice}" == 1 ]; then
 	    echo "Windows Server"
 	    printf "To replicate the sysvol folder you must set up a task on your Primary domain controller\n"\
-	    "-Click 'Start' / 'Run' / type 'taskschd.msc' and click 'OK'\n-Right-click to 'Task Scheduler'"\
-	    "/ choose 'Create Task'\n-Enter a task name\n-Select 'Run whether user is logged on or not'\n"\
-	    "-Navigate to the 'Triggers' tab and click the 'New' button\n-Select 'Daily', check\n"\
-	    "'Repeat task every: 5 minutes' and 'for a duration of: 1 day'. Choose the time for the first start about"\
-	    "15 min in the future, to have enough time for the remaining steps\n-Click 'OK' to save the trigger\n"\
-	    "-Navigate to the 'Actions' tab and click the 'New' button\n-Choose 'Start a program' and fill the fields"\
-	    "with following path/arguments:\n	Program/script:  C:\Windows\System32\Robocopy.exe\n"\
-	    "	Add arguments (optional):  \\${DCIP}\SYSVOL\${KerberosRealm}\ C:\Windows\SYSVOL\domain\ /mir /sec\n"\
-	    "-Click 'OK' to save the action\n-Save the task with 'OK'\n Restart the File Replication Service\n"\
-	    "-'Start' / 'Run' / enter 'services.msc' and click 'OK'\n-Restart the 'File Replication Service'"
-	
+"-Click 'Start' / 'Run' / type 'taskschd.msc' and click 'OK'\n-Right-click to 'Task Scheduler'"\
+"/ choose 'Create Task'\n-Enter a task name\n-Select 'Run whether user is logged on or not'\n"\
+"-Navigate to the 'Triggers' tab and click the 'New' button\n-Select 'Daily', check\n"\
+"'Repeat task every: 5 minutes' and 'for a duration of: 1 day'. Choose the time for the first start\nabout"\
+"15 min in the future, to have enough time for the remaining steps\n-Click 'OK' to save the trigger\n"\
+"-Navigate to the 'Actions' tab and click the 'New' button\n-Choose 'Start a program' and fill the fields"\
+"with following path/arguments:\n	Program/script:  C:\Windows\System32\Robocopy.exe\n"\
+"	Add arguments (optional):  \\IP_of_this_DC\SYSVOL\Domain_name\ C:\Windows\SYSVOL\domain\ /mir /sec\n"\
+"-Click 'OK' to save the action\n-Save the task with 'OK'\n Restart the File Replication Service\n"\
+"-'Start' / 'Run' / enter 'services.msc' and click 'OK'\n-Restart the 'File Replication Service'\n"\
+"After the replication task is started enter 'y' to continue\nIn case you currently cannot setup the "\
+"replication enter 'n'\nand you will be shown steps to take after replication is setup (y/n)"
 
+	    WindowsReplReset=1
+	    while [ "${WindowsReplReset}" == 1 ]; do
+		if [ -z "${WindowsReplMessage}" ]; then
+		    WindowsReplMessage=1
+		elif [ "${WindowsReplMessage}" ]; then
+		    echo "Must enter y or n"
+		fi
+
+		read -p ">" WindowsRepl
+
+
+		if [ "${WindowsRepl}" == y ] || [ "${WindowsRepl}" == n ]; then 
+		    WindowsReplReset=0
+		fi
+
+	        if [ "${WindowsRepl}" == n ]; then
+		    exit 0
+		else
+		    printf "When you do start the replication:\n-Reset the Sysvol folder "\
+"using the command 'samba-tool ntacl sysvolreset'\n-Kill the winbindd,nmbd and smbd processes\n"\
+"-Start samba using the command 'samba'"
+		fi
+	    done
 
 
 
@@ -216,28 +239,29 @@ if [ "$EUID" == 0 ]; then
 
 
 
-	    idmapDir="$(dirname $0)/idmap.ldb"
-	    cp ${idmapDir} /var/lib/samba/private/idmap.ldb
-	    net cache flush
+	    #idmapDir="$(dirname $0)/idmap.ldb"
+	    #cp ${idmapDir} /var/lib/samba/private/idmap.ldb
+	    #net cache flush
 
-	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
-	    chmod 600 /var/lib/samba/rsyncd-sysvol.secret
-	    if [ -e /var/spool/cron/crontab/root ]; then
-		crontab -l > tmpcron
-	    fi
-	    printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
-	    crontab tmpcron
-	    rm tmpcron
+	    #printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
+	    #chmod 600 /var/lib/samba/rsyncd-sysvol.secret
+	    #if [ -e /var/spool/cron/crontab/root ]; then
+	#	crontab -l > tmpcron
+	    #fi
+	    #printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
+	    #crontab tmpcron
+	    #rm tmpcron
 
-	    samba-tool ntacl sysvolreset
 	fi
 
-	pkill smbd
-	pkill winbindd
-	pkill nmbd
+	#samba-tool ntacl sysvolreset
+
+	#pkill smbd
+	#pkill winbindd
+	#pkill nmbd
 
 #Starting Samba service
-	samba
+	#samba
 
     fi
 else
