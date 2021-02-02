@@ -5,9 +5,9 @@ if [ "$EUID" == 0 ]; then
 
 #Confirming that conditions needed for the correct funtioning of the script are met
     printf "\nBefore you run this script make sure\n- you have set a static IP adresses for your DC\n- your DC correctly resolves "\
-"fully-qualified domain name and short hostname (in /etc/hosts)\nIn case of a domain controller "\
-"replication\n- Copy the idmap.ldb file from you PDC into the folder where this script is located\n"\
-"If your PDC is on Samba: -rsync installed\n-"
+"fully-qualified domain name and short hostname (in /etc/hosts)\n- Your DCs have synchronised time using NTP"\
+"\nIn case of a domain controller replication\n- Copy the idmap.ldb file from you PDC into the folder where"\
+"this script is located\nIf your PDC is on Samba: -rsync installed\n-"
 
     printf "Are these conditions met? y/n\n"
 
