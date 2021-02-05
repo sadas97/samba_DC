@@ -124,7 +124,7 @@ if [ "$EUID" == 0 ]; then
 	cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
-	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
+	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n" >> /etc/resolvconf/resolv.conf.d/head
 	systemctl restart resolvconf
 
 #Stoping samba related processes
@@ -156,7 +156,7 @@ if [ "$EUID" == 0 ]; then
 	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
-	printf "nameserver ${PDCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
+	printf "nameserver ${PDCIP}\nsearch ${KerberosRealm}\n" >> /etc/resolvconf/resolv.conf.d/head
 	systemctl restart resolvconf
 
 #Choosing a join method
