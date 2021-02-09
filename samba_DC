@@ -128,12 +128,13 @@ if [ "$EUID" == 0 ]; then
 	systemctl restart resolvconf
 
 #Stoping samba related processes
-	pkill smbd
-	pkill winbindd
-	pkill nmbd
+	systemctl stop smbd nmbd winbind
+	systemctl disable smbd nmbd winbind
 
+	cp .init_script /usr/lib/systemd/system/samba-dc.service
+	systemctl daemon-reload
 #Starting Samba service
-	samba
+	systemctl start samba-dc
 
 
 
@@ -284,12 +285,15 @@ if [ "$EUID" == 0 ]; then
 	samba-tool ntacl sysvolreset
 
 #Stoping samba related processes
-	pkill smbd
-	pkill winbindd
-	pkill nmbd
+	systemctl stop smbd nmbd winbind
+	systemctl disable smbd nmbd winbind
 
+	cp .init_script /usr/lib/systemd/system/samba-dc.service
+	systemctl daemon-reload
 #Starting Samba service
-	samba
+	systemctl enable samba-dc
+	systemctl start samba-dc
+
 
     fi
 else
