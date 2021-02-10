@@ -127,20 +127,17 @@ if [ "$EUID" == 0 ]; then
 	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
 	systemctl restart resolvconf
 
+
 #Stoping samba related processes
 	systemctl stop smbd nmbd winbind
 	systemctl mask smbd nmbd winbind
 	systemctl disable smbd nmbd winbind
 
-	systemctl unmask samba-ad-dc
-	#systemctl daemon-reload
 
 #Starting Samba service
+	systemctl unmask samba-ad-dc
+	systemctl enable samba-ad-dc
 	systemctl start samba-ad-dc
-	#systemctl enable samba-dc
-	#systemctl start samba-dc
-
-
 
 
 
@@ -287,6 +284,19 @@ if [ "$EUID" == 0 ]; then
 
 #reseting sysvol
 	samba-tool ntacl sysvolreset
+
+
+
+#Stoping samba related processes
+	systemctl stop smbd nmbd winbind
+	systemctl mask smbd nmbd winbind
+	systemctl disable smbd nmbd winbind
+
+
+#Starting Samba service
+	systemctl unmask samba-ad-dc
+	systemctl enable samba-ad-dc
+	systemctl start samba-ad-dc
 
 #Stoping samba related processes
 	systemctl stop smbd nmbd winbind
