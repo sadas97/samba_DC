@@ -129,13 +129,14 @@ if [ "$EUID" == 0 ]; then
 
 #Stoping samba related processes
 	systemctl stop smbd nmbd winbind
+	systemctl mask smbd nmbd winbind
 	systemctl disable smbd nmbd winbind
 
 	cp .init_script /usr/lib/systemd/system/samba-dc.service
 	systemctl daemon-reload
 #Starting Samba service
-	systemctl enable samba-dc
-	systemctl start samba-dc
+	#systemctl enable samba-dc
+	#systemctl start samba-dc
 
 
 
