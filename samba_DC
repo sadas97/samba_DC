@@ -124,7 +124,7 @@ if [ "$EUID" == 0 ]; then
 	cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
-	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n" >> /etc/resolvconf/resolv.conf.d/head
+	printf "nameserver ${DCIP}\nsearch ${KerberosRealm}\n" > /etc/resolvconf/resolv.conf.d/head
 	systemctl restart resolvconf
 
 #Stoping samba related processes
@@ -132,9 +132,9 @@ if [ "$EUID" == 0 ]; then
 	systemctl mask smbd nmbd winbind
 	systemctl disable smbd nmbd winbind
 
-	#cp .init_script /usr/lib/systemd/system/samba-dc.service
 	systemctl unmask samba-ad-dc
-	systemctl daemon-reload
+	#systemctl daemon-reload
+
 #Starting Samba service
 	systemctl start samba-ad-dc
 	#systemctl enable samba-dc
