@@ -71,35 +71,35 @@ if [ "$EUID" == 0 ]; then
 
 #Getting varibles for krb5 config file and domain join or for domain provision
 
-    #Cycle asking user for input
-    while [ -z "${KerberosRealm}" ]; do
-	if [ -z "${KRBMessage}" ]; then
-	    KRBMessage=1
-	elif [ "${KRBMessage}" ]; then
-	    echo "Kerberos realm must be filled"
-	fi
-	read -p "Enter Kerberos realm:" KerberosRealm
-    done
+	#Cycle asking user for input
+	while [ -z "${KerberosRealm}" ]; do
+	    if [ -z "${KRBMessage}" ]; then
+	        KRBMessage=1
+	    elif [ "${KRBMessage}" ]; then
+		echo "Kerberos realm must be filled"
+	    fi
+	    read -p "Enter Kerberos realm:" KerberosRealm
+	done
 
-    #Cycle asking user for input
-    while [ -z "${DomainName}" ]; do
-	if [ -z "${DNMessage}" ]; then
-	    DNMessage=1
-	elif [ "${DNMessage}" ]; then
+	#Cycle asking user for input
+	while [ -z "${DomainName}" ]; do
+	    if [ -z "${DNMessage}" ]; then
+	        DNMessage=1
+	    elif [ "${DNMessage}" ]; then
 	    echo "Domain name must be filled"
-	fi
-	read -p "Enter NetBios domain name (In example.com -> EXAMPLE):" DomainName
-    done
+	    fi
+	    read -p "Enter NetBios domain name (In example.com -> EXAMPLE):" DomainName
+	done
 
-    #Cycle asking user for input
-    while [ -z "${DCIP}" ]; do
-	if [ -z "${DomCIP}" ]; then
-	    ADPI=1
-	elif [ "${DomCIP}" ]; then
-	    echo "IP must be filled"
-	fi
-	read -p "Enter the local IP of this domain controller:" DCIP
-    done
+	#Cycle asking user for input
+	while [ -z "${DCIP}" ]; do
+	    if [ -z "${DomCIP}" ]; then
+		ADPI=1
+	    elif [ "${DomCIP}" ]; then
+		echo "IP must be filled"
+	    fi
+	    read -p "Enter the local IP of this domain controller:" DCIP
+	done
 
 
 
@@ -199,39 +199,104 @@ if [ "$EUID" == 0 ]; then
 	fi
 
 
-#Rsync password for the Sysvol folder replication
+#Choosing what system is the PDC on
+	printf "Is PDC a\n1 - Windows server\n2 - Samba PDC\n"
 	#Cycle asking user for input
-	while [ -z "${SysvolPass}" ]; do
-	    if [ -z "${SysvolPassPMessage}" ]; then
-		SysvolPassPMessage=1
-	    elif [ "${SysvolPassMessage}" ]; then
-		echo "Sysvol password must be filled"
+	ChoiceReset=1
+	while [ "${ChoiceReset}" == 1 ]; do
+	    if [ -z "${SysvolConfMessage}" ]; then
+		SysvolConfMessage=1
+	    elif [ "${SysvolConfMessage}" ]; then
+		echo "Must enter 1 or 2"
 	    fi
-	    read -s -p "Enter Sysvol replication password:" SysvolPass
+
+	    read -p ">" SysvolChoice
+
+	    if [ "${SysvolChoice}" == 1 ] || [ "${SysvolChoice}" == 2 ]; then 
+		ChoiceReset=0
+	    fi
 	done
+#Windows Server PDC
+	if [ "${SysvolChoice}" == 1 ]; then
+	    printf "To replicate the sysvol folder you must set up a task on your Primary domain controller\n"\
+"-Click 'Start' / 'Run' / type 'taskschd.msc' and click 'OK'\n-Right-click to 'Task Scheduler'"\
+"/ choose 'Create Task'\n-Enter a task name\n-Select 'Run whether user is logged on or not'\n"\
+"-Navigate to the 'Triggers' tab and click the 'New' button\n-Select 'Daily', check\n"\
+"'Repeat task every: 5 minutes' and 'for a duration of: 1 day'. Choose the time for the first start\nabout"\
+"15 min in the future, to have enough time for the remaining steps\n-Click 'OK' to save the trigger\n"\
+"-Navigate to the 'Actions' tab and click the 'New' button\n-Choose 'Start a program' and fill the fields"\
+"with following path/arguments:\n	Program/script:  C:\Windows\System32\Robocopy.exe\n"\
+"	Add arguments (optional):  \\IP_of_this_DC\SYSVOL\Domain_name\ C:\Windows\SYSVOL\domain\ /mir /sec\n"\
+"-Click 'OK' to save the action\n-Save the task with 'OK'\n Restart the File Replication Service\n"\
+"-'Start' / 'Run' / enter 'services.msc' and click 'OK'\n-Restart the 'File Replication Service'\n"\
+"After the replication task is started enter 'y' to continue\nIn case you currently cannot setup the "\
+"replication enter 'n'\nand you will be shown steps to take after replication is setup (y/n)"
+
+	    #Cycle asking user for input
+	    WindowsReplReset=1
+	    while [ "${WindowsReplReset}" == 1 ]; do
+		if [ -z "${WindowsReplMessage}" ]; then
+		    WindowsReplMessage=1
+		elif [ "${WindowsReplMessage}" ]; then
+		    echo "Must enter y or n"
+		fi
+
+		read -p ">" WindowsRepl
+
+		if [ "${WindowsRepl}" == y ] || [ "${WindowsRepl}" == n ]; then 
+		    WindowsReplReset=0
+		fi
+	    done
+
+	    #If the user chooses not to setup replication on the Windows PDC
+	    if [ "${WindowsRepl}" == n ]; then
+		exit 0
+	    else
+		printf "When you do start the replication:\n-Reset the Sysvol folder "\
+"using the command 'samba-tool ntacl sysvolreset'\n-Kill the winbindd,nmbd and smbd processes\n"\
+"-Start samba using the command 'samba'"
+	    fi
+
+
+#Samba PDC
+	elif [ "${SysvolChoice}" == 2 ]; then
+
+	    #Cycle asking user for input
+	    while [ -z "${SysvolPass}" ]; do
+		if [ -z "${SysvolPassPMessage}" ]; then
+		    SysvolPassPMessage=1
+	        elif [ "${SysvolPassMessage}" ]; then
+		    echo "Sysvol password must be filled"
+		fi
+		read -s -p "Enter Sysvol replication password:" SysvolPass
+	    done
 
 
 #Replace the idmap.ldb file
-	idmapDir="$(dirname $0)/idmap.ldb"
-	cp ${idmapDir} /var/lib/samba/private/idmap.ldb
-#Clear cache
-	net cache flush
+	    idmapDir="$(dirname $0)/idmap.ldb"
+	    cp ${idmapDir} /var/lib/samba/private/idmap.ldb
+#Clear Winbind cache
+	    net cache flush
 
 #Config Rsync and change permission so that .secrets file isn't world readable
-	printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
-	chmod 600 /var/lib/samba/rsyncd-sysvol.secret
+	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
+	    chmod 600 /var/lib/samba/rsyncd-sysvol.secret
 
 #List existing cron jobs
-	if [ -e /var/spool/cron/crontab/root ]; then
-	    crontab -l > tmpcron
-	fi
-#Create rsync sysvol replication cron job
-	printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
-	crontab tmpcron
-	rm tmpcron
+	    if [ -e /var/spool/cron/crontab/root ]; then
+		crontab -l > tmpcron
+	    fi
+#Add rsync sysvol replication cron job
+	    printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
+	    crontab tmpcron
+	    rm tmpcron
 
-#Reseting sysvol
+	fi
+
+#reseting sysvol
 	samba-tool ntacl sysvolreset
+
+
 
 #Stoping samba related processes
 	systemctl stop smbd nmbd winbind
