@@ -7,7 +7,7 @@ if [ "$EUID" == 0 ]; then
     printf "\nBefore you run this script make sure\n- you have set a static IP adresses for your DC\n- your DC correctly resolves "\
 "fully-qualified domain name and short hostname (in /etc/hosts)\n- Your DCs and domain members have synchronised time using NTP"\
 "\nIn case of a domain controller replication\n- Copy the idmap.ldb file from you PDC into the folder where"\
-"this script is located\nIf your PDC is on Samba: -rsync installed\n-"
+"this script is located\nIf your main DC is on Samba: -rsync installed\n-"
 
     printf "Are these conditions met? y/n\n"
 
@@ -101,7 +101,28 @@ if [ "$EUID" == 0 ]; then
 	read -p "Enter the local IP of this domain controller:" DCIP
     done
 
+    printf "The default logging options are:\n"\
+"log file = /var/log/samba/%m.log\nlog level = 1"
+    printf "Do you wish to change that? (y/n)"
+    Reset=1
+    while [ "${Reset}" == 1 ]; do
+	if [ -z "${LoggingMessage}" ]; then
+	    LoggingMessage=1
+	elif [ "${LoggingMessage}" ]; then
+	    echo "Must enter y or n"
+	fi
 
+	read -p ">" Logging
+
+	if [ "${Logging}" == y ] || [ "${Logging}" == n ]; then 
+	    Reset=0
+	fi
+    done
+
+    if [ "${Logging}" == y ]; then
+	
+	log=""
+    fi
 
 
 #Samba as Primary Controller
@@ -123,8 +144,9 @@ if [ "$EUID" == 0 ]; then
 	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
 	cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
-#Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
+	
 
+#Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
 	nameservers="nameserver ${DCIP}\nsearch ${KerberosRealm}\n"
 	sed -i "s/nameserver ${DCIP}//g" /etc/resolvconf/resolv.conf.d/head
 	sed -i "s/search ${KerberosRealm}//g" /etc/resolvconf/resolv.conf.d/head
@@ -198,40 +220,56 @@ if [ "$EUID" == 0 ]; then
 	    samba-tool domain join ${KerberosRealm} DC -k yes
 	fi
 
-
-#Rsync password for the Sysvol folder replication
-	#Cycle asking user for input
-	while [ -z "${SysvolPass}" ]; do
-	    if [ -z "${SysvolPassPMessage}" ]; then
-		SysvolPassPMessage=1
-	    elif [ "${SysvolPassMessage}" ]; then
-		echo "Sysvol password must be filled"
+	printf "Samba is unable to replicate the sysvol folder itself and so this script"\
+"uses rsync\n to do in instead. This only works if the main DC is a Samba server.\n"\
+"Do NOT choose to replicate sysvol using this script if your main DC is a Windows server!\n"
+	printf "Do you want to replicate sysvol using rsync? (y/n)\n"
+	Reset=1
+	while [ "${Reset}" == 1 ]; do
+	    if [ -z "${SysvolReplMessage}" ]; then
+		SysvolReplMessage=1
+	    elif [ "${SysvolReplMessage}" ]; then
+		echo "\nMust enter y or n\n"
 	    fi
-	    read -s -p "Enter Sysvol replication password:" SysvolPass
+
+	    read -p ">" SysvolRepl
+
+	    if [ "${SysvolRepl}" == y ] || [ "${SysvolRepl}" == n ]; then 
+		Reset=0
+	    fi
 	done
 
+	if [ "${SysvolRepl}" == 1 ]; then
+#Rsync password for the Sysvol folder replication
+	    #Cycle asking user for input
+	    while [ -z "${SysvolPass}" ]; do
+		if [ -z "${SysvolPassPMessage}" ]; then
+		    SysvolPassPMessage=1
+	        elif [ "${SysvolPassMessage}" ]; then
+		    echo "Sysvol password must be filled"
+		fi
+		read -s -p "Enter Sysvol replication password:" SysvolPass
+	    done
 
 #Replace the idmap.ldb file
-	idmapDir="$(dirname $0)/idmap.ldb"
-	cp ${idmapDir} /var/lib/samba/private/idmap.ldb
+	    idmapDir="$(dirname $0)/idmap.ldb"
+	    cp ${idmapDir} /var/lib/samba/private/idmap.ldb
 #Clear cache
-	net cache flush
-
+	    net cache flush
 #Config Rsync and change permission so that .secrets file isn't world readable
-	printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
-	chmod 600 /var/lib/samba/rsyncd-sysvol.secret
-
+	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
+	    chmod 600 /var/lib/samba/rsyncd-sysvol.secret
 #List existing cron jobs
-	if [ -e /var/spool/cron/crontab/root ]; then
-	    crontab -l > tmpcron
-	fi
+	    if [ -e /var/spool/cron/crontab/root ]; then
+		crontab -l > tmpcron
+	    fi
 #Create rsync sysvol replication cron job
-	printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
-	crontab tmpcron
-	rm tmpcron
-
+	    printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
+	    crontab tmpcron
+	    rm tmpcron
 #Reseting sysvol
-	samba-tool ntacl sysvolreset
+	    samba-tool ntacl sysvolreset
+	fi
 
 #Stoping samba related processes
 	systemctl stop smbd nmbd winbind
