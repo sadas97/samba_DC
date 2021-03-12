@@ -64,8 +64,8 @@ if [ "$EUID" == 0 ]; then
 
 #Installing needed packages and removing config file (it is created automaticaly
 #when provisioning/joining domain)
-    DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
-    rm /etc/samba/smb.conf
+    #DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
+    #rm /etc/samba/smb.conf
 
 
 
@@ -97,32 +97,27 @@ if [ "$EUID" == 0 ]; then
 	    ADPI=1
 	elif [ "${DomCIP}" ]; then
 	    echo "IP must be filled"
-	fi
+  	fi
 	read -p "Enter the local IP of this domain controller:" DCIP
     done
 
-    printf "The default logging options are:\n"\
-"log file = /var/log/samba/%m.log\nlog level = 1"
-    printf "Do you wish to change that? (y/n)"
-    Reset=1
-    while [ "${Reset}" == 1 ]; do
-	if [ -z "${LoggingMessage}" ]; then
-	    LoggingMessage=1
-	elif [ "${LoggingMessage}" ]; then
-	    echo "Must enter y or n"
-	fi
-
-	read -p ">" Logging
-
-	if [ "${Logging}" == y ] || [ "${Logging}" == n ]; then 
-	    Reset=0
-	fi
-    done
-
-    if [ "${Logging}" == y ]; then
-	
-	log=""
+#Setup logging
+    printf "Set the logging options\n"
+    printf 'Enter the log file (leave empty to set default - /var/log/samba/%%m.log)\n'
+    #Aks for user input, if the input is empty it is set to pre-determined value
+    read -p ">" LogFile
+    if [ -z ${LogFile} ]; then
+	LogFile=/var/log/samba/%m.log
     fi
+
+    printf "Enter the log level (leave empty to set default - 1)\n"
+    read -p ">" LogLevel
+    if [ -z ${LogLevel} ]; then
+	LogLevel=1
+    fi
+
+    #Find "[global]" and append the log file and log level parameters
+    sed -i "/\[global\]/a\	log file = $LogFile\n	log level = $LogLevel" /etc/samba/smb.conf
 
 
 #Samba as Primary Controller
@@ -288,4 +283,6 @@ else
     echo "Script must be started as root"
 fi
 
-exit 0
+exit 0sed -i '/\[global\]/a\    log file = \/toor\/foo
+    log level = 1' /root/samba_DC/samba_DCsed -i '/\[global\]/a\    log file = \/toor\/foo
+    log level = 1' /root/samba_DC/samba_DC
