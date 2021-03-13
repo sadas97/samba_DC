@@ -4,10 +4,10 @@
 if [ "$EUID" == 0 ]; then
 
 #Confirming that conditions needed for the correct funtioning of the script are met
-    printf "\nBefore you run this script make sure\n- you have set a static IP adresses for your DC\n- your DC correctly resolves "\
+    printf "\nBefore you run this script make sure\n- You have set a static IP adresses for your DC\n- Your DC correctly resolves "\
 "fully-qualified domain name and short hostname (in /etc/hosts)\n- Your DCs and domain members have synchronised time using NTP"\
-"\nIn case of a domain controller replication\n- Copy the idmap.ldb file from you PDC into the folder where"\
-"this script is located\nIf your main DC is on Samba: -rsync installed\n-"
+"\nIn case of a domain controller replication\n- You have a copy of the idmap.ldb file from you main DC in the folder where "\
+"this script is located\nIf your main DC is Samba:\n- rsync is installed and configured on the main DC\n"
 
     printf "Are these conditions met? y/n\n"
 
@@ -56,7 +56,7 @@ if [ "$EUID" == 0 ]; then
 
 	read -p ">" ConfChoice
 
-	if [ "${ConfChoice}" == 1 ] || [ "${ConfChoice}" == 2 ]; then 
+	if [ "${ConfChoice}" == 1 ] || [ "${ConfChoice}" == 2 ]; then
 	    ChoiceReset=0
 	fi
     done
@@ -66,6 +66,7 @@ if [ "$EUID" == 0 ]; then
 #when provisioning/joining domain)
     #DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
     #rm /etc/samba/smb.conf
+
 
 
 
@@ -94,30 +95,12 @@ if [ "$EUID" == 0 ]; then
     #Cycle asking user for input
     while [ -z "${DCIP}" ]; do
 	if [ -z "${DomCIP}" ]; then
-	    ADPI=1
+	    DomCIP=1
 	elif [ "${DomCIP}" ]; then
 	    echo "IP must be filled"
   	fi
 	read -p "Enter the local IP of this domain controller:" DCIP
     done
-
-#Setup logging
-    printf "Set the logging options\n"
-    printf 'Enter the log file (leave empty to set default - /var/log/samba/%%m.log)\n'
-    #Aks for user input, if the input is empty it is set to pre-determined value
-    read -p ">" LogFile
-    if [ -z ${LogFile} ]; then
-	LogFile=/var/log/samba/%m.log
-    fi
-
-    printf "Enter the log level (leave empty to set default - 1)\n"
-    read -p ">" LogLevel
-    if [ -z ${LogLevel} ]; then
-	LogLevel=1
-    fi
-
-    #Find "[global]" and append the log file and log level parameters
-    sed -i "/\[global\]/a\	log file = $LogFile\n	log level = $LogLevel" /etc/samba/smb.conf
 
 
 #Samba as Primary Controller
@@ -129,7 +112,7 @@ if [ "$EUID" == 0 ]; then
 	    if [ -z "${ADPMessage}" ]; then
 		ADPMessage=1
 	    elif [ "${ADPMessage}" ]; then
-		echo "Admin password must be filled"
+		printf "\nAdmin password must be filled\n"
 	    fi
 
 	    read -s -p "Enter domain administrator password:" AdminPass
@@ -216,7 +199,7 @@ if [ "$EUID" == 0 ]; then
 	fi
 
 	printf "Samba is unable to replicate the sysvol folder itself and so this script"\
-"uses rsync\n to do in instead. This only works if the main DC is a Samba server.\n"\
+"works\n around it using rsync. This only works if the main DC is a Samba server.\n"\
 "Do NOT choose to replicate sysvol using this script if your main DC is a Windows server!\n"
 	printf "Do you want to replicate sysvol using rsync? (y/n)\n"
 	Reset=1
@@ -279,10 +262,30 @@ if [ "$EUID" == 0 ]; then
 
 
     fi
+
+
+#Setup logging
+    printf "Set the logging options\n"
+    printf 'Enter the log file (leave empty to set default - /var/log/samba/%%m.log)\n'
+    #Aks for user input, if the input is empty it is set to pre-determined value
+    read -p ">" LogFile
+    if [ -z ${LogFile} ]; then
+	LogFile=/var/log/samba/%m.log
+    fi
+
+    printf "Enter the log level (leave empty to set default - 1)\n"
+    read -p ">" LogLevel
+    if [ -z ${LogLevel} ]; then
+	LogLevel=1
+    fi
+
+    #Find "[global]" and append the log file and log level parameters
+    sed -i "/\[global\]/a\	log file = $LogFile\n	log level = $LogLevel" /etc/samba/smb.conf
+
+
+
 else
     echo "Script must be started as root"
 fi
 
-exit 0sed -i '/\[global\]/a\    log file = \/toor\/foo
-    log level = 1' /root/samba_DC/samba_DCsed -i '/\[global\]/a\    log file = \/toor\/foo
-    log level = 1' /root/samba_DC/samba_DC
+exit 0
