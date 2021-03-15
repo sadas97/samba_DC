@@ -64,8 +64,8 @@ if [ "$EUID" == 0 ]; then
 
 #Installing needed packages and removing config file (it is created automaticaly
 #when provisioning/joining domain)
-#    DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
-#    rm /etc/samba/smb.conf
+    DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
+    rm /etc/samba/smb.conf
 
 
 
@@ -119,17 +119,16 @@ if [ "$EUID" == 0 ]; then
 	done
 
 #Provisioning domain and replacing original krb5 config file with an auto-created one
-#	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
-#	cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
+	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
+	cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
-	
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
-#	nameservers="nameserver ${DCIP}\nsearch ${KerberosRealm}\n"
-#	sed -i "s/nameserver ${DCIP}//g" /etc/resolvconf/resolv.conf.d/head
-#	sed -i "s/search ${KerberosRealm}//g" /etc/resolvconf/resolv.conf.d/head
-#	nameservers="${nameservers}$(cat /etc/resolvconf/resolv.conf.d/head | grep -w nameserver)\n"
-#	printf "${nameservers}" > /etc/resolvconf/resolv.conf.d/head
+	nameservers="nameserver ${DCIP}\nsearch ${KerberosRealm}\n"
+	sed -i "s/nameserver ${DCIP}//g" /etc/resolvconf/resolv.conf.d/head
+	sed -i "s/search ${KerberosRealm}//g" /etc/resolvconf/resolv.conf.d/head
+	nameservers="${nameservers}$(cat /etc/resolvconf/resolv.conf.d/head | grep -w nameserver)\n"
+	printf "${nameservers}" > /etc/resolvconf/resolv.conf.d/head
 
 	systemctl restart resolvconf
 
