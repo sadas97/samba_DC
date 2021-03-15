@@ -241,6 +241,7 @@ if [ "$EUID" == 0 ]; then
 	    samba-tool domain join ${KerberosRealm} DC -k yes
 	fi
 
+#Configure rsync
 	printf "Samba is unable to replicate the sysvol folder itself and so this script"\
 "works\n around it using rsync. This only works if the main DC is a Samba server.\n"\
 "Do NOT choose to replicate sysvol using this script if your main DC is a Windows server!\n"
@@ -260,7 +261,7 @@ if [ "$EUID" == 0 ]; then
 	    fi
 	done
 
-	if [ "${SysvolRepl}" == 1 ]; then
+	if [ "${SysvolRepl}" == y ]; then
 #Rsync password for the Sysvol folder replication
 	    #Cycle asking user for input
 	    while [ -z "${SysvolPass}" ]; do
