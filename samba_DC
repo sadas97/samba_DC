@@ -56,8 +56,8 @@ if [ "$EUID" == 0 ]; then
 #Installing needed packages and moving config file (it is created automaticaly when provisioning/joining domain)
     DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
     mkdir -p /etc/sambaBckp/
-    mv /etc/samba/smb.conf /etc/sambaBckp/samba.conf.bckp
-    rm /etc/samba/smb.conf
+    mv -f /etc/samba/smb.conf /etc/sambaBckp/samba.conf.bckp
+    rm -f /etc/samba/smb.conf
 
 
 
@@ -111,7 +111,8 @@ if [ "$EUID" == 0 ]; then
 
 #Provisioning domain and replacing original krb5 config file with an auto-created one
 	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
-	cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
+	mv -f /etc/krb.conf /etc/sambaBckp/krb.conf.bckp
+	cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
@@ -173,7 +174,7 @@ if [ "$EUID" == 0 ]; then
 
 #Copy rsyncd.conf to /etc/rsyncd.conf, create rsyncd.secret file and add the secrets file location
 #to rsyncd.conf
-	    cp ./rsyncd.conf /etc/rsyncd.conf
+	    cp -f $(dirname $0)/rsyncd.conf /etc/rsyncd.conf
 	    printf "sysvol-replication:${RsyncPass}" > ${RsyncSecrets}
 	    printf "\nsecrets file = ${RsyncSecrets}" >> /etc/rsyncd.conf
 #Change rsyncd.secret
@@ -266,8 +267,7 @@ if [ "$EUID" == 0 ]; then
 	    done
 
 #Replace the idmap.ldb file
-	    idmapDir="$(dirname $0)/idmap.ldb"
-	    cp ${idmapDir} /var/lib/samba/private/idmap.ldb
+	    cp -f $(dirname $0)/idmap.ldb /var/lib/samba/private/idmap.ldb
 #Clear cache
 	    net cache flush
 #Config Rsync and change permission so that .secrets file isn't world readable
