@@ -57,8 +57,6 @@ if [ "$EUID" == 0 ]; then
     DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
     mkdir -p /etc/sambaBckp/
     mv -f /etc/samba/smb.conf /etc/sambaBckp/samba.conf.bckp
-    rm -f /etc/samba/smb.conf
-
 
 
 
