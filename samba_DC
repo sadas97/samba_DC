@@ -123,18 +123,6 @@ if [ "$EUID" == 0 ]; then
 	printf "${nameservers}" > /etc/resolvconf/resolv.conf.d/head
 	systemctl restart resolvconf
 
-
-#Stoping samba related processes
-	systemctl stop smbd nmbd winbind
-	systemctl mask smbd nmbd winbind
-	systemctl disable smbd nmbd winbind
-
-
-#Starting Samba service
-	systemctl unmask samba-ad-dc
-	systemctl enable samba-ad-dc
-	systemctl start samba-ad-dc
-
 #Configuring rsync
 	printf "Do you want rsync to be configured? (y/n)\n"
 	RsyncConfigReset=1
@@ -181,6 +169,7 @@ if [ "$EUID" == 0 ]; then
 	    chmod 600 /var/lib/samba/rsyncd.secret
 	    systemctl restart rsync
 	fi
+
 
 
 #Samba DC replicant
@@ -267,8 +256,9 @@ if [ "$EUID" == 0 ]; then
 	    done
 
 #Replace the idmap.ldb file
+	    mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
 	    cp -f $(dirname $0)/idmap.ldb /var/lib/samba/private/idmap.ldb
-#Clear cache
+#Clear the Samba Net cache
 	    net cache flush
 #Config Rsync and change permission so that .secrets file isn't world readable
 	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
@@ -284,20 +274,19 @@ if [ "$EUID" == 0 ]; then
 #Reseting sysvol
 	    samba-tool ntacl sysvolreset
 	fi
-
+    fi
+    
+    
 #Stoping samba related processes
-	systemctl stop smbd nmbd winbind
-	systemctl mask smbd nmbd winbind
-	systemctl disable smbd nmbd winbind
+    systemctl stop smbd nmbd winbind
+    systemctl mask smbd nmbd winbind
+    systemctl disable smbd nmbd winbind
 
 
 #Starting Samba service
-	systemctl unmask samba-ad-dc
-	systemctl enable samba-ad-dc
-	systemctl start samba-ad-dc
-
-
-    fi
+    systemctl unmask samba-ad-dc
+    systemctl enable samba-ad-dc
+    systemctl start samba-ad-dc
 
 
 #Setup logging
