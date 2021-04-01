@@ -268,13 +268,13 @@ if [ "$EUID" == 0 ]; then
 #Create rsync sysvol replication cron job
 	    printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
 	    crontab tmpcron
-	    rm tmpcron
+	    rm -f tmpcron
 #Reseting sysvol
 	    samba-tool ntacl sysvolreset
 	fi
     fi
-    
-    
+
+
 #Stoping samba related processes
     systemctl stop smbd nmbd winbind
     systemctl mask smbd nmbd winbind
