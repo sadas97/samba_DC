@@ -5,19 +5,19 @@ if [ "$EUID" == 0 ]; then
 
 #Confirming that conditions needed for the correct funtioning of the script are met
     printf "\nBefore you run this script make sure\n- No Samba processes are running"\
-"- You have set a static IP adresses for this machine\n- Your machine correctly resolves "\
+"\n- You have set a static IP adresses for this machine\n- Your machine correctly resolves "\
 "fully-qualified domain name and short hostname (in /etc/hosts)\n- Your DCs and domain members have synchronised time using NTP"\
 "\nIn case of a domain controller replication\n- You have a copy of the idmap.ldb file from you main DC in the folder where "\
-"this script is located\nIf your main DC is Samba:\n- rsync is installed and configured on it\n"
+"this script is located\nIf your main DC is Samba\n- rsync is installed and configured on it\n"
+
 
     printf "Are these conditions met? y/n\n"
-
     ConfirmReset=1
     while [ "${ConfirmReset}" == 1 ]; do
 	if [ -z "${ConfirmMessage}" ]; then
 	    ConfirmMessage=1
 	elif [ "${ConfirmMessage}" ]; then
-	    printf "Must enter y or n"
+	    printf "\nMust enter y or n\n"
 	fi
 
 	read -p ">" ConfirmChoice
@@ -29,20 +29,19 @@ if [ "$EUID" == 0 ]; then
 
 #End script if user chooses 'no'
     if [ "${ConfirmChoice}" == n ]; then
-	printf "After you finish these steps run the script again"
+	printf "After you finish these steps run the script again\n"
 	exit 0
     fi
 
 
 #Domain controller config choice
     printf "Choose your configuration\n1 - Configure as Primary domain controller\n2 - Replicate domain controller\n"
-
     ChoiceReset=1
     while [ "${ChoiceReset}" == 1 ]; do
 	if [ -z "${ConfMessage}" ]; then
 	    ConfMessage=1
 	elif [ "${ConfMessage}" ]; then
-	    printf "Must enter 1 or 2"
+	    printf "\nMust enter 1 or 2\n"
 	fi
 
 	read -p ">" ConfChoice
@@ -61,35 +60,37 @@ if [ "$EUID" == 0 ]; then
 
 
 #Getting varibles for krb5 config file and domain join or for domain provision
-
     #Kerberos realm
+    printf "Enter the Kerberos realm\n"
     while [ -z "${KerberosRealm}" ]; do
 	if [ -z "${KRBMessage}" ]; then
 	    KRBMessage=1
 	elif [ "${KRBMessage}" ]; then
-	    printf "Kerberos realm must be filled"
+	    printf "\nKerberos realm must be filled\n"
 	fi
-	read -p "Enter the Kerberos realm:" KerberosRealm
+	read -p ">" KerberosRealm
     done
 
     #NetBios domain name
+    printf "Enter the NetBios domain name (In example.com -> EXAMPLE)\n"
     while [ -z "${DomainName}" ]; do
 	if [ -z "${DNMessage}" ]; then
 	    DNMessage=1
 	elif [ "${DNMessage}" ]; then
-	    printf "Domain name must be filled"
+	    printf "\nDomain name must be filled\n"
 	fi
-	read -p "Enter the NetBios domain name (In example.com -> EXAMPLE):" DomainName
+	read -p ">" DomainName
     done
 
     #Local IP
+    printf "Enter the local IP of this domain controller\n"
     while [ -z "${DCIP}" ]; do
 	if [ -z "${DomCIP}" ]; then
 	    DomCIP=1
 	elif [ "${DomCIP}" ]; then
-	    printf "IP must be filled"
+	    printf "\nIP must be filled\n"
   	fi
-	read -p "Enter the local IP of this domain controller:" DCIP
+	read -p ">" DCIP
     done
 
 
@@ -97,6 +98,7 @@ if [ "$EUID" == 0 ]; then
     if [ "${ConfChoice}" == 1 ]; then
 
 	#Getting admin password needed for provision
+	printf "Set the domain administrator password\n"
 	while [ -z "${AdminPass}" ]; do
 	    if [ -z "${ADPMessage}" ]; then
 		ADPMessage=1
@@ -104,12 +106,12 @@ if [ "$EUID" == 0 ]; then
 		printf "\nAdmin password must be filled\n"
 	    fi
 
-	    read -s -p "Set the domain administrator password:" AdminPass
+	    read -s -p ">" AdminPass
 	done
 
 #Provisioning domain and replacing original krb5 config file with an auto-created one
 	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
-	mv -f /etc/krb.conf /etc/sambaBckp/krb.conf.bckp
+	mv -f /etc/krb5.conf /etc/sambaBckp/krb5.conf.bckp
 	cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
 
 
@@ -128,7 +130,7 @@ if [ "$EUID" == 0 ]; then
 	    if [ -z "${RsyncConfigMessage}" ]; then
 		RsyncConfigMessage=1
 	    elif [ "${RsyncConfigMessage}" ]; then
-		printf "Must enter y or n"
+		printf "\nMust enter y or n\n"
 	    fi
 
 	    read -p ">" RsyncConfig
@@ -142,13 +144,14 @@ if [ "$EUID" == 0 ]; then
 	if [ "${RsyncConfig}" == y ]; then
 	
 	    #Set the password for rsync
+	    printf "Set the Rsync password\n"
 	    while [ -z "${RsyncPass}" ]; do
 		if [ -z "${RsyncPassMessage}" ]; then
 		    RsyncPassMessage=1
 		elif [ "${RsyncPassMessage}" ]; then
 		    printf "\nRsync Password must be filled\n"
 		fi
-		read -s -p "Set the Rsync password:" RsyncPass
+		read -s -p ">" RsyncPass
 	    done
 
 	    #Set the location for rsyncd.secret
@@ -174,13 +177,14 @@ if [ "$EUID" == 0 ]; then
     elif [ "${ConfChoice}" == 2 ]; then
 
 	#Getting the IP of the primary DC
+	printf "Enter the IP of the primary domain controller\n"
 	while [ -z "${PDCIP}" ]; do
 	    if [ -z "${PDCIPMessage}" ]; then
 		PDCIPMessage=1
 	    elif [ "${PDCIPMessage}" ]; then
-		printf "IP must be filled"
+		printf "\nIP must be filled\n"
 	    fi
-	    read -p "Enter the IP of the primary domain controller:" PDCIP
+	    read -p ">" PDCIP
 	done
 
 #Configuring krb5
@@ -202,7 +206,7 @@ if [ "$EUID" == 0 ]; then
 	    if [ -z "${JoinConfMessage}" ]; then
 		JoinConfMessage=1
 	    elif [ "${JoinConfMessage}" ]; then
-		printf "Must enter 1 or 2"
+		printf "\nMust enter 1 or 2\n"
 	    fi
 
 	    read -p ">" JoinChoice
@@ -226,6 +230,7 @@ if [ "$EUID" == 0 ]; then
 	printf "Samba is unable to replicate the sysvol folder itself and so this script"\
 "works\n around it using rsync. This only works if the main DC is a Samba server.\n"\
 "Do NOT choose to replicate sysvol using this script if your main DC is a Windows server!\n"
+
 	printf "Do you want to replicate sysvol using rsync? (y/n)\n"
 	Reset=1
 	while [ "${Reset}" == 1 ]; do
@@ -244,13 +249,14 @@ if [ "$EUID" == 0 ]; then
 
 	if [ "${SysvolRepl}" == y ]; then
 	    #Rsync password for the Sysvol folder replication
+	    printf "Enter Sysvol replication password\n"
 	    while [ -z "${SysvolPass}" ]; do
 		if [ -z "${SysvolPassPMessage}" ]; then
 		    SysvolPassPMessage=1
 	        elif [ "${SysvolPassMessage}" ]; then
-		    printf "Sysvol password must be filled"
+		    printf "\nSysvol password must be filled\n"
 		fi
-		read -s -p "Enter Sysvol replication password:" SysvolPass
+		read -s -p ">" SysvolPass
 	    done
 
 #Replace the idmap.ldb file
@@ -288,7 +294,7 @@ if [ "$EUID" == 0 ]; then
 
 
 #Setup logging
-    printf "Set the logging options\n"
+    printf "\nSet the logging options\n"
     printf 'Enter the log file (leave empty to set default - /var/log/samba/%%m.log)\n'
 
     #Log file parameter
@@ -309,7 +315,7 @@ if [ "$EUID" == 0 ]; then
 
 
 else
-    printf "Script must be started as root"
+    printf "Script must be started as root\n"
 fi
 
 exit 0
