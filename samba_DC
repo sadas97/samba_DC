@@ -260,10 +260,17 @@ if [ "$EUID" == 0 ]; then
 	    done
 
 #Replace the idmap.ldb file
-	    mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
-	    cp -f $(dirname $0)/idmap.ldb /var/lib/samba/private/idmap.ldb
-#Clear the Samba Net cache
-	    net cache flush
+	    if [ ! -f $(dirname $0)/idmap.ldb ]; then
+		printf "\nThe main DCs idmap.ldb file was not found. Place this file into\n"\
+"/var/lib/samba/private/ and clear Sambas Net cache using 'net cache flush'\n"\
+"(Do not run this script again, only finish these two steps)\n"
+		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
+	    else
+		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
+		cp -f $(dirname $0)/idmap.ldb /var/lib/samba/private/idmap.ldb
+	    #Clear the Samba Net cache
+		net cache flush
+	    fi
 #Config Rsync and change permission so that .secrets file isn't world readable
 	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
 	    chmod 600 /var/lib/samba/rsyncd-sysvol.secret
