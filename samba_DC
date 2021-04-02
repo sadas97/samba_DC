@@ -119,13 +119,13 @@ if [ "$EUID" == 0 ]; then
 
 #Provisioning domain and replacing original krb5 config file with an auto-created one
 	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
-	printf "$(date '+%d/%m/%Y %H:%M:%S') The domain has been provisioned and Samba server established as a domain controller" >> /var/log/samba_DC.log
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The domain has been provisioned and Samba server established as a domain controller\n" >> /var/log/samba_DC.log
 
 	mv -f /etc/krb5.conf /etc/sambaBckp/krb5.conf.bckp
-	printf "$(date '+%d/%m/%Y %H:%M:%S') The original Kerberos configuration file has been moved to /etc/sambaBckp/" >> /var/log/samba_DC.log
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The original Kerberos configuration file has been moved to /etc/sambaBckp/\n" >> /var/log/samba_DC.log
 
 	cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
-	printf "$(date '+%d/%m/%Y %H:%M:%S') The generated Kerberos configuration file has replaced the original in /etc/krb5.conf" >> /var/log/samba_DC.log
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The generated Kerberos configuration file has replaced the original in /etc/krb5.conf\n" >> /var/log/samba_DC.log
 
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
@@ -135,7 +135,7 @@ if [ "$EUID" == 0 ]; then
 	nameservers="${nameservers}$(cat /etc/resolvconf/resolv.conf.d/head | grep -w nameserver)\n"
 	printf "${nameservers}" > /etc/resolvconf/resolv.conf.d/head
 	systemctl restart resolvconf
-	printf "$(date '+%d/%m/%Y %H:%M:%S') The parameters nameserver ${DCIP} and search ${KerberosRealm} have been added to the /etc/resolv.conf file (other entries have been preserved)" >> /var/log/samba_DC.log
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The parameters nameserver ${DCIP} and search ${KerberosRealm} have been added to the /etc/resolv.conf file (other entries have been preserved)\n" >> /var/log/samba_DC.log
 
 #Configuring rsync
 	printf "Do you want rsync to be configured? (y/n)\n"
@@ -209,9 +209,9 @@ if [ "$EUID" == 0 ]; then
 
 #Configuring krb5
 	mv -f /etc/krb5.conf
-	printf "$(date '+%d/%m/%Y %H:%M:%S') Backup of the original krb5.conf file created in /etc/sambaBckp/" >> /var/log/samba_DC.log
+	printf "$(date '+%d/%m/%Y %H:%M:%S') Backup of the original krb5.conf file created in /etc/sambaBckp/\n" >> /var/log/samba_DC.log
 	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
-	printf "$(date '+%d/%m/%Y %H:%M:%S') Configure krb5.conf file" >> /var/log/samba_DC.log
+	printf "$(date '+%d/%m/%Y %H:%M:%S') Configure krb5.conf file\n" >> /var/log/samba_DC.log
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
 	nameservers="nameserver ${PDCIP}\nsearch ${KerberosRealm}\n"
@@ -219,7 +219,7 @@ if [ "$EUID" == 0 ]; then
 	sed -i "s/search ${KerberosRealm}//g" /etc/resolvconf/resolv.conf.d/head
 	nameservers="${nameservers}$(cat /etc/resolvconf/resolv.conf.d/head | grep -w nameserver)\n"
 	printf "${nameservers}" > /etc/resolvconf/resolv.conf.d/head
-	printf "$(date '+%d/%m/%Y %H:%M:%S') The parameters nameserver ${PDCIP} and search ${KerberosRealm} have been added to the /etc/resolv.conf file (other entries have been preserved)" >> /var/log/samba_DC.log
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The parameters nameserver ${PDCIP} and search ${KerberosRealm} have been added to the /etc/resolv.conf file (other entries have been preserved)\n" >> /var/log/samba_DC.log
 
 	systemctl restart resolvconf
 
@@ -249,7 +249,7 @@ if [ "$EUID" == 0 ]; then
 	    kinit administrator
 	    samba-tool domain join ${KerberosRealm} DC -k yes
 	fi
-	printf "$(date '+%d/%m/%Y %H:%M:%S') The domain controller has been replicated" >> /var/log/samba_DC.log
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The domain controller has been replicated\n" >> /var/log/samba_DC.log
 
 #Configure rsync
 	printf "Samba is unable to replicate the sysvol folder itself and so this script"\
@@ -290,14 +290,14 @@ if [ "$EUID" == 0 ]; then
 "/var/lib/samba/private/ and clear Sambas Net cache using 'net cache flush'\n"\
 "(Do not run this script again, only finish these two steps)\n"
 		printf "${Message}"
-		printf "$(date '+%d/%m/%Y %H:%M:%S') ${Message}" >> /var/log/samba_DC.log
+		printf "$(date '+%d/%m/%Y %H:%M:%S') ${Message}\n" >> /var/log/samba_DC.log
 		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
 		printf "$(date '+%d/%m/%Y %H:%M:%S') The original idmap.ldb has been moved to /etc/sambaBckp/" >> /var/log/samba_DC.log
 	    else
 		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
 		cp -f $(dirname $0)/idmap.ldb /var/lib/samba/private/idmap.ldb
-		printf "$(date '+%d/%m/%Y %H:%M:%S') The original idmap.ldb has been moved to /etc/sambaBckp/" >> /var/log/samba_DC.log
-		printf "$(date '+%d/%m/%Y %H:%M:%S') The main DCs idmap.ldb file has been copied to /var/lib/samba/private/" >> /var/log/samba_DC.log
+		printf "$(date '+%d/%m/%Y %H:%M:%S') The original idmap.ldb has been moved to /etc/sambaBckp/\n" >> /var/log/samba_DC.log
+		printf "$(date '+%d/%m/%Y %H:%M:%S') The main DCs idmap.ldb file has been copied to /var/lib/samba/private/\n" >> /var/log/samba_DC.log
 	    #Clear the Samba Net cache
 		net cache flush
 	    fi
@@ -360,6 +360,8 @@ if [ "$EUID" == 0 ]; then
 
 else
     printf "Script must be started as root\n"
+    printf "$(date '+%d/%m/%Y %H:%M:%S') Script terminated (user not root)\n" >> /var/log/samba_DC.log
+
 fi
 
 exit 0
