@@ -292,16 +292,18 @@ if [ "$EUID" == 0 ]; then
 "(Do not run this script again, only finish these two steps)\n"
 		printf "${Message}"
 		printf "$(date '+%d/%m/%Y %H:%M:%S') ${Message}\n" >> /var/log/samba_DC.log
-		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
+	#	mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
 		printf "$(date '+%d/%m/%Y %H:%M:%S') The original idmap.ldb has been moved to /etc/sambaBckp/" >> /var/log/samba_DC.log
 	    else
-		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
-		cp -f $(dirname $0)/idmap.ldb /var/lib/samba/private/idmap.ldb
-		printf "$(date '+%d/%m/%Y %H:%M:%S') The original idmap.ldb has been moved to /etc/sambaBckp/\n" >> /var/log/samba_DC.log
-		printf "$(date '+%d/%m/%Y %H:%M:%S') The main DCs idmap.ldb file has been copied to /var/lib/samba/private/\n" >> /var/log/samba_DC.log
+	#	mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
+	#	cp -f $(dirname $0)/idmap.ldb /var/lib/samba/private/idmap.ldb
+	#	printf "$(date '+%d/%m/%Y %H:%M:%S') The original idmap.ldb has been moved to /etc/sambaBckp/\n" >> /var/log/samba_DC.log
+	#	printf "$(date '+%d/%m/%Y %H:%M:%S') The main DCs idmap.ldb file has been copied to /var/lib/samba/private/\n" >> /var/log/samba_DC.log
 	    #Clear the Samba Net cache
 		net cache flush
 	    fi
+
+	    net cache flush
 
 #Config Rsync and change permission so that .secrets file isn't world readable
 	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
