@@ -1,9 +1,10 @@
 #!/bin/bash
 
-touch /var/log/samba_DC.log
-
 #Check if user is root
 if [ "$EUID" == 0 ]; then
+
+#Create log file
+    touch /var/log/samba_DC.log
 
 #Confirming that conditions needed for the correct funtioning of the script are met
     printf "\nBefore you run this script make sure\n- No Samba processes are running"\
@@ -252,8 +253,8 @@ if [ "$EUID" == 0 ]; then
 	printf "$(date '+%d/%m/%Y %H:%M:%S') The domain controller has been replicated\n" >> /var/log/samba_DC.log
 
 #Configure rsync
-	printf "Samba is unable to replicate the sysvol folder itself and so this script"\
-"works\n around it using rsync. This only works if the main DC is a Samba server.\n"\
+	printf "\nSamba is unable to replicate the sysvol folder itself and so this script"\
+" works\n around it using rsync. This only works if the main DC is a Samba server.\n"\
 "Do NOT choose to replicate sysvol using this script if your main DC is a Windows server!\n"
 
 	printf "Do you want to replicate sysvol using rsync? (y/n)\n"
@@ -360,7 +361,6 @@ if [ "$EUID" == 0 ]; then
 
 else
     printf "Script must be started as root\n"
-    printf "$(date '+%d/%m/%Y %H:%M:%S') Script terminated (user not root)\n" >> /var/log/samba_DC.log
 
 fi
 
