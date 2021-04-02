@@ -1,5 +1,7 @@
 #!/bin/bash
 
+touch /var/log/samba_DC.log
+
 #Check if user is root
 if [ "$EUID" == 0 ]; then
 
@@ -30,9 +32,9 @@ if [ "$EUID" == 0 ]; then
 #End script if user chooses 'no'
     if [ "${ConfirmChoice}" == n ]; then
 	printf "After you finish these steps run the script again\n"
+	printf "$(date '+%d/%m/%Y %H:%M:%S') Script terminated (starting conditions not met)\n" >> /var/log/samba_DC.log
 	exit 0
     fi
-
 
 #Domain controller config choice
     printf "Choose your configuration\n1 - Configure as Primary domain controller\n2 - Replicate domain controller\n"
@@ -54,14 +56,15 @@ if [ "$EUID" == 0 ]; then
 
 #Installing needed packages and moving config file (it is created automaticaly when provisioning/joining domain)
     DEBIAN_FRONTEND=noninteractive apt -yq install acl attr samba samba-dsdb-modules samba-vfs-modules winbind libpam-winbind libnss-winbind libpam-krb5 krb5-config krb5-user dnsutils resolvconf rsync
+    printf "$(date '+%d/%m/%Y %H:%M:%S') Packages installed\n" >> /var/log/samba_DC.log
     mkdir -p /etc/sambaBckp/
     mv -f /etc/samba/smb.conf /etc/sambaBckp/smb.conf.bckp
-
+    printf "$(date '+%d/%m/%Y %H:%M:%S') Sambas configuration file smb.conf moved to /etc/sambaBckp/\n" >> /var/log/samba_DC.log
 
 
 #Getting varibles for krb5 config file and domain join or for domain provision
     #Kerberos realm
-    printf "Enter the Kerberos realm\n"
+    printf "Enter the Kerberos realm (Same as DNS domain name)\n"
     while [ -z "${KerberosRealm}" ]; do
 	if [ -z "${KRBMessage}" ]; then
 	    KRBMessage=1
@@ -70,6 +73,8 @@ if [ "$EUID" == 0 ]; then
 	fi
 	read -p ">" KerberosRealm
     done
+    printf "$(date '+%d/%m/%Y %H:%M:%S') Kerberos realm set to ${KerberosRealm}\n" >> /var/log/samba_DC.log
+
 
     #NetBios domain name
     printf "Enter the NetBios domain name (In example.com -> EXAMPLE)\n"
@@ -81,6 +86,8 @@ if [ "$EUID" == 0 ]; then
 	fi
 	read -p ">" DomainName
     done
+    printf "$(date '+%d/%m/%Y %H:%M:%S') NetBIOS domain name set to ${DomainName}\n" >> /var/log/samba_DC.log
+
 
     #Local IP
     printf "Enter the local IP of this domain controller\n"
@@ -89,13 +96,13 @@ if [ "$EUID" == 0 ]; then
 	    DomCIP=1
 	elif [ "${DomCIP}" ]; then
 	    printf "\nIP must be filled\n"
-  	fi
+	fi
 	read -p ">" DCIP
     done
 
-
 #Samba as Primary Controller
     if [ "${ConfChoice}" == 1 ]; then
+    printf "$(date '+%d/%m/%Y %H:%M:%S') Configuring primary domain controller\n" >> /var/log/samba_DC.log
 
 	#Getting admin password needed for provision
 	printf "Set the domain administrator password\n"
@@ -109,10 +116,16 @@ if [ "$EUID" == 0 ]; then
 	    read -s -p ">" AdminPass
 	done
 
+
 #Provisioning domain and replacing original krb5 config file with an auto-created one
 	samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm="${KerberosRealm}" --domain="${DomainName}" --adminpass="${AdminPass}"
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The domain has been provisioned and Samba server established as a domain controller" >> /var/log/samba_DC.log
+
 	mv -f /etc/krb5.conf /etc/sambaBckp/krb5.conf.bckp
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The original Kerberos configuration file has been moved to /etc/sambaBckp/" >> /var/log/samba_DC.log
+
 	cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The generated Kerberos configuration file has replaced the original in /etc/krb5.conf" >> /var/log/samba_DC.log
 
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
@@ -122,6 +135,7 @@ if [ "$EUID" == 0 ]; then
 	nameservers="${nameservers}$(cat /etc/resolvconf/resolv.conf.d/head | grep -w nameserver)\n"
 	printf "${nameservers}" > /etc/resolvconf/resolv.conf.d/head
 	systemctl restart resolvconf
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The parameters nameserver ${DCIP} and search ${KerberosRealm} have been added to the /etc/resolv.conf file (other entries have been preserved)" >> /var/log/samba_DC.log
 
 #Configuring rsync
 	printf "Do you want rsync to be configured? (y/n)\n"
@@ -142,7 +156,8 @@ if [ "$EUID" == 0 ]; then
 
 #Configure Rsync
 	if [ "${RsyncConfig}" == y ]; then
-	
+	    printf "$(date '+%d/%m/%Y %H:%M:%S') Configuring Rsync\n" >> /var/log/samba_DC.log
+
 	    #Set the password for rsync
 	    printf "Set the Rsync password\n"
 	    while [ -z "${RsyncPass}" ]; do
@@ -160,14 +175,19 @@ if [ "$EUID" == 0 ]; then
 	    if [ -z "${RsyncSecrets}" ]; then
 		RsyncSecrets=/var/lib/samba/rsyncd.secret
 	    fi
-
+	    printf "$(date '+%d/%m/%Y %H:%M:%S') The location of the rsyncd.secret file has been set to ${RsyncSecrets}\n" >> /var/log/samba_DC.log
 #Copy rsyncd.conf to /etc/rsyncd.conf, create rsyncd.secret file and add the secrets file location
 #to rsyncd.conf
 	    cp -f $(dirname $0)/rsyncd.conf /etc/rsyncd.conf
 	    printf "sysvol-replication:${RsyncPass}" > ${RsyncSecrets}
 	    printf "\nsecrets file = ${RsyncSecrets}" >> /etc/rsyncd.conf
+
+	    printf "$(date '+%d/%m/%Y %H:%M:%S') Rsync konfiguration file has been placed to /etc/rsyncd.conf\n" >> /var/log/samba_DC.log
+	    printf "$(date '+%d/%m/%Y %H:%M:%S') Rsync password file has been created in ${RsyncSecrets}\n" >> /var/log/samba_DC.log
+
 #Change rsyncd.secret
 	    chmod 600 /var/lib/samba/rsyncd.secret
+	    printf "$(date '+%d/%m/%Y %H:%M:%S') Access permissions for Rsync password changed to 0600\n" >> /var/log/samba_DC.log
 	    systemctl restart rsync
 	fi
 
@@ -188,7 +208,10 @@ if [ "$EUID" == 0 ]; then
 	done
 
 #Configuring krb5
+	mv -f /etc/krb5.conf
+	printf "$(date '+%d/%m/%Y %H:%M:%S') Backup of the original krb5.conf file created in /etc/sambaBckp/" >> /var/log/samba_DC.log
 	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
+	printf "$(date '+%d/%m/%Y %H:%M:%S') Configure krb5.conf file" >> /var/log/samba_DC.log
 
 #Configuring resolvconf so that the DC is able to locate services like LDAP and Kerberos
 	nameservers="nameserver ${PDCIP}\nsearch ${KerberosRealm}\n"
@@ -196,6 +219,7 @@ if [ "$EUID" == 0 ]; then
 	sed -i "s/search ${KerberosRealm}//g" /etc/resolvconf/resolv.conf.d/head
 	nameservers="${nameservers}$(cat /etc/resolvconf/resolv.conf.d/head | grep -w nameserver)\n"
 	printf "${nameservers}" > /etc/resolvconf/resolv.conf.d/head
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The parameters nameserver ${PDCIP} and search ${KerberosRealm} have been added to the /etc/resolv.conf file (other entries have been preserved)" >> /var/log/samba_DC.log
 
 	systemctl restart resolvconf
 
@@ -211,7 +235,7 @@ if [ "$EUID" == 0 ]; then
 
 	    read -p ">" JoinChoice
 
-	    if [ "${JoinChoice}" == 1 ] || [ "${JoinChoice}" == 2 ]; then 
+	    if [ "${JoinChoice}" == 1 ] || [ "${JoinChoice}" == 2 ]; then
 		ChoiceReset=0
 	    fi
 	done
@@ -225,6 +249,7 @@ if [ "$EUID" == 0 ]; then
 	    kinit administrator
 	    samba-tool domain join ${KerberosRealm} DC -k yes
 	fi
+	printf "$(date '+%d/%m/%Y %H:%M:%S') The domain controller has been replicated" >> /var/log/samba_DC.log
 
 #Configure rsync
 	printf "Samba is unable to replicate the sysvol folder itself and so this script"\
@@ -261,19 +286,27 @@ if [ "$EUID" == 0 ]; then
 
 #Replace the idmap.ldb file
 	    if [ ! -f $(dirname $0)/idmap.ldb ]; then
-		printf "\nThe main DCs idmap.ldb file was not found. Place this file into\n"\
+		Message="\nThe main DCs idmap.ldb file was not found. Place this file into\n"\
 "/var/lib/samba/private/ and clear Sambas Net cache using 'net cache flush'\n"\
 "(Do not run this script again, only finish these two steps)\n"
+		printf "${Message}"
+		printf "$(date '+%d/%m/%Y %H:%M:%S') ${Message}" >> /var/log/samba_DC.log
 		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
+		printf "$(date '+%d/%m/%Y %H:%M:%S') The original idmap.ldb has been moved to /etc/sambaBckp/" >> /var/log/samba_DC.log
 	    else
 		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
 		cp -f $(dirname $0)/idmap.ldb /var/lib/samba/private/idmap.ldb
+		printf "$(date '+%d/%m/%Y %H:%M:%S') The original idmap.ldb has been moved to /etc/sambaBckp/" >> /var/log/samba_DC.log
+		printf "$(date '+%d/%m/%Y %H:%M:%S') The main DCs idmap.ldb file has been copied to /var/lib/samba/private/" >> /var/log/samba_DC.log
 	    #Clear the Samba Net cache
 		net cache flush
 	    fi
+
 #Config Rsync and change permission so that .secrets file isn't world readable
 	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
 	    chmod 600 /var/lib/samba/rsyncd-sysvol.secret
+	    printf "$(date '+%d/%m/%Y %H:%M:%S') Access permissions for Rsync password have been changed to 0600\n" >> /var/log/samba_DC.log
+
 #List existing cron jobs
 	    if [ -e /var/spool/cron/crontab/root ]; then
 		crontab -l > tmpcron
@@ -282,23 +315,27 @@ if [ "$EUID" == 0 ]; then
 	    printf "\n*/5 * * * * rsync -XAavz --delete-after --password-file=/var/lib/samba/rsyncd-sysvol.secret rsync://sysvol-replication@${PDCIP}/SysVol/ /var/lib/samba/sysvol/\n" >> tmpcron
 	    crontab tmpcron
 	    rm -f tmpcron
+	    printf "$(date '+%d/%m/%Y %H:%M:%S') Cron job for Rsync replication has been created\n" >> /var/log/samba_DC.log
+
 #Reseting sysvol
 	    samba-tool ntacl sysvolreset
 	fi
     fi
 
 
-#Stoping samba related processes
+#Disabling Samba related daemons
     systemctl stop smbd nmbd winbind
     systemctl mask smbd nmbd winbind
     systemctl disable smbd nmbd winbind
 
+    printf "$(date '+%d/%m/%Y %H:%M:%S') smbd nmbd winbind daemons have been stopped, masked and disabled\n" >> /var/log/samba_DC.log
 
-#Starting Samba service
+#Enabling samba_ad_dc daemon
     systemctl unmask samba-ad-dc
     systemctl enable samba-ad-dc
     systemctl start samba-ad-dc
 
+    printf "$(date '+%d/%m/%Y %H:%M:%S') samba-ad-dc daemon has been unmasked, enabled and started\n" >> /var/log/samba_DC.log
 
 #Setup logging
     printf "\nSet the logging options\n"
