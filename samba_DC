@@ -91,7 +91,7 @@ if [ "$EUID" == 0 ]; then
 
 
     #Local IP
-    printf "Enter the local IP of this domain controller\n"
+    printf "Enter the IP of this domain controller\n"
     while [ -z "${DCIP}" ]; do
 	if [ -z "${DomCIP}" ]; then
 	    DomCIP=1
