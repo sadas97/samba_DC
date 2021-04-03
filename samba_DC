@@ -224,7 +224,7 @@ if [ "$EUID" == 0 ]; then
 	systemctl restart resolvconf
 
 #Choosing a join method
-	printf "Join to domain using\n1 - Username and password (using administrator account)\n2 - Kerberos\n"
+	printf "Join to domain using\n1 - Username and password\n2 - Kerberos (Using administrator account)\n"
 	ChoiceReset=1
 	while [ "${ChoiceReset}" == 1 ]; do
 	    if [ -z "${JoinConfMessage}" ]; then
