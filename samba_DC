@@ -360,9 +360,9 @@ if [ "$EUID" == 0 ]; then
     sed -i "/\[global\]/a\	log file = $LogFile\n	log level = $LogLevel" /etc/samba/smb.conf
 
     if [ "${ConfChoice}" == 1 ]; then
-	printf "Reboot this domain controller"
+	printf "Reboot this domain controller\n"
     elif [ "${ConfChoice}" == 2 ]; then
-	printf "Reboot both this domain controller and the main domain controller"
+	printf "Reboot both this domain controller and the main domain controller\n"
     fi
 
 else
