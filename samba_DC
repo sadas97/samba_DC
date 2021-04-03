@@ -10,8 +10,8 @@ if [ "$EUID" == 0 ]; then
     printf "\nBefore you run this script make sure\n- No Samba processes are running"\
 "\n- You have set a static IP adresses for this machine\n- Your machine correctly resolves "\
 "fully-qualified domain name and short hostname (in /etc/hosts)\n- Your DCs and domain members have synchronised time using NTP"\
-"\nIn case of a domain controller replication\n- You have a copy of the idmap.ldb file from you main DC in the folder where "\
-"this script is located\nIf your main DC is Samba\n- rsync is installed and configured on it\n"
+"\nIn case of a Samba domain controller replication\n- You have a copy of the idmap.ldb file from you main DC in the folder where "\
+"this script is located\n- rsync is installed and configured on it\n"
 
 
     printf "Are these conditions met? y/n\n"
