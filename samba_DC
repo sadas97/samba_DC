@@ -90,7 +90,7 @@ if [ "$EUID" == 0 ]; then
     printf "$(date '+%d/%m/%Y %H:%M:%S') NetBIOS domain name set to ${DomainName}\n" >> /var/log/samba_DC.log
 
 
-    #Local IP
+    #IP address
     printf "Enter the IP of this domain controller\n"
     while [ -z "${DCIP}" ]; do
 	if [ -z "${DomCIP}" ]; then
