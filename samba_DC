@@ -302,8 +302,6 @@ if [ "$EUID" == 0 ]; then
 		net cache flush
 	    fi
 
-	    net cache flush
-
 #Config Rsync and change permission so that .secrets file isn't world readable
 	    printf "${SysvolPass}" > /var/lib/samba/rsyncd-sysvol.secret
 	    chmod 600 /var/lib/samba/rsyncd-sysvol.secret
