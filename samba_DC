@@ -242,8 +242,18 @@ if [ "$EUID" == 0 ]; then
 
 #Join machine to the domain and replicate DC
 	if [ "${JoinChoice}" == 1 ]; then
+	    #Get username
+	    printf "Enter the username\n"
+    	    while [ -z "${JoinUsername}" ]; do
+	        if [ -z "${JoinUsernameMessage}" ]; then
+	            JoinUsernameMessage=1
+	        elif [ "${JoinUsernameMessage}" ]; then
+	            printf "\nUsername must be filled\n"
+	        fi
+	        read -p ">" JoinUsername
+            done
 	    #Joining to domain using username and password
-	    samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/administrator"
+	    samba-tool domain join ${KerberosRealm} DC -U"${DomainName^^}/${JoinUsername}"
 	elif [ "${JoinChoice}" == 2 ]; then
 	    #Joining using kerberos
 	    kinit administrator
