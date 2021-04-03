@@ -176,7 +176,6 @@ if [ "$EUID" == 0 ]; then
 	    if [ -z "${RsyncSecrets}" ]; then
 		RsyncSecrets=/var/lib/samba/rsyncd.secret
 	    fi
-	    printf "$(date '+%d/%m/%Y %H:%M:%S') The location of the rsyncd.secret file has been set to ${RsyncSecrets}\n" >> /var/log/samba_DC.log
 #Copy rsyncd.conf to /etc/rsyncd.conf, create rsyncd.secret file and add the secrets file location
 #to rsyncd.conf
 	    cp -f $(dirname $0)/rsyncd.conf /etc/rsyncd.conf
