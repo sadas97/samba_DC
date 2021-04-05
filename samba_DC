@@ -8,10 +8,10 @@ if [ "$EUID" == 0 ]; then
 
 #Confirming that conditions needed for the correct funtioning of the script are met
     printf "\nBefore you run this script make sure\n- No Samba processes are running"\
-"\n- You have set a static IP adresses for this machine\n- Your machine correctly resolves "\
-"fully-qualified domain name and short hostname (in /etc/hosts)\n- Your DCs and domain members have synchronised time using NTP"\
+"\n- You have set static IP adresses for this machine\n- Your machine correctly resolves "\
+"fully-qualified domain name and short hostname (in /etc/hosts)\n- Your machine has synchronised time using NTP (members of a domain must have the same time)"\
 "\nIn case of a Samba domain controller replication\n- You have a copy of the idmap.ldb file from you main DC in the folder where "\
-"this script is located\n- rsync is installed and configured on it\n"
+"this script is located\n- Rsync is installed and configured on the main domain controller\n"
 
 
     printf "Are these conditions met? y/n\n"
@@ -38,7 +38,7 @@ if [ "$EUID" == 0 ]; then
     fi
 
 #Domain controller config choice
-    printf "Choose your configuration\n1 - Configure as Primary domain controller\n2 - Replicate domain controller\n"
+    printf "Choose your configuration\n1 - Configure as main domain controller\n2 - Replicate domain controller\n"
     ChoiceReset=1
     while [ "${ChoiceReset}" == 1 ]; do
 	if [ -z "${ConfMessage}" ]; then
