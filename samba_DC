@@ -208,7 +208,7 @@ if [ "$EUID" == 0 ]; then
 	done
 
 #Configuring krb5
-	mv -f /etc/krb5.conf
+	mv -f /etc/krb5.conf /etc/sambaBckp/krb5.conf.bckp
 	printf "$(date '+%d/%m/%Y %H:%M:%S') Backup of the original krb5.conf file created in /etc/sambaBckp/\n" >> /var/log/samba_DC.log
 	printf "[libdefaults]\ndns_lookup_realm = false\ndns_lookup_kdc = true\ndefault_realm = ${KerberosRealm^^}" > /etc/krb5.conf
 	printf "$(date '+%d/%m/%Y %H:%M:%S') Configure krb5.conf file\n" >> /var/log/samba_DC.log
@@ -286,8 +286,8 @@ if [ "$EUID" == 0 ]; then
 	    #Rsync password for the Sysvol folder replication
 	    printf "Enter Sysvol replication password\n"
 	    while [ -z "${SysvolPass}" ]; do
-		if [ -z "${SysvolPassPMessage}" ]; then
-		    SysvolPassPMessage=1
+		if [ -z "${SysvolPassMessage}" ]; then
+		    SysvolPassMessage=1
 	        elif [ "${SysvolPassMessage}" ]; then
 		    printf "\nSysvol password must be filled\n"
 		fi
@@ -297,8 +297,9 @@ if [ "$EUID" == 0 ]; then
 #Replace the idmap.ldb file
 	    if [ ! -f $(dirname $0)/idmap.ldb ]; then
 		Message="\nThe main DCs idmap.ldb file was not found. Place this file into\n"\
-"/var/lib/samba/private/ and clear Sambas Net cache using 'net cache flush'\n"\
-"(Do not run this script again, only finish these two steps)\n"
+"/var/lib/samba/private/, clear Sambas Net cache using 'net cache flush'\n"\
+"and reset the Sysvol folder using samba-tool ntacl sysvolreset\n"\
+"(Do not run this script again, only finish these three steps)\n"
 		printf "${Message}"
 		printf "$(date '+%d/%m/%Y %H:%M:%S') ${Message}\n" >> /var/log/samba_DC.log
 		mv -f /var/lib/samba/private/idmap.ldb /etc/sambaBckp/idmap.ldb.bckp
@@ -328,7 +329,9 @@ if [ "$EUID" == 0 ]; then
 	    printf "$(date '+%d/%m/%Y %H:%M:%S') Cron job for Rsync replication has been created\n" >> /var/log/samba_DC.log
 
 #Reseting sysvol
-	    samba-tool ntacl sysvolreset
+	    if [ -f $(dirname $0)/idmap.ldb ]; then
+		samba-tool ntacl sysvolreset
+	    fi
 	fi
     fi
 
