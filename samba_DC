@@ -101,7 +101,7 @@ if [ "$EUID" == 0 ]; then
 	read -p ">" DCIP
     done
 
-#Samba as Primary Controller
+#Samba as Main Controller
     if [ "${ConfChoice}" == 1 ]; then
     printf "$(date '+%d/%m/%Y %H:%M:%S') Configuring primary domain controller\n" >> /var/log/samba_DC.log
 
